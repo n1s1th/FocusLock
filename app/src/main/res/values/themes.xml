@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.FocusLock" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:statusBarColor">@color/focus_background</item>
+        <item name="android:navigationBarColor">@color/focus_background</item>
+        <item name="android:windowBackground">@color/focus_background</item>
+    </style>
+
+    <style name="Theme.FocusLock.Fullscreen" parent="Theme.FocusLock">
+        <item name="android:windowFullscreen">true</item>
+        <item name="android:windowContentOverlay">@null</item>
+    </style>
+</resources>

@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">BlockIT | Stop Phone Addiction</string>
+    <string name="accessibility_service_label">BlockIT Blocking Engine</string>
+    <string name="accessibility_service_description">Required to detect distracting apps, prevent navigation bypasses, and keep your focus lock active during sessions.</string>
+    <string name="notification_channel_name">Active Focus Session</string>
+    <string name="notification_channel_desc">Shows active focus timer countdown and session status</string>
+    <string name="routine_notification_channel_name">Scheduled Focus Routines</string>
+    <string name="routine_notification_channel_desc">Notifies when scheduled focus routines begin</string>
+</resources>
