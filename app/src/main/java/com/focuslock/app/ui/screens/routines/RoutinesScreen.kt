@@ -133,42 +133,56 @@ fun RoutinesScreen(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(horizontal = 20.dp, vertical = 24.dp),
+                    .padding(horizontal = 16.dp, vertical = 22.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
-                // Clocks Row: Start Time [ ] End Time
-                Row(
+                // Clocks Row: Start Time [—] End Time (Responsive sizing so it never truncates)
+                BoxWithConstraints(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    contentAlignment = Alignment.Center
                 ) {
-                    DigitalTimerDisplay(
-                        hours = startHour,
-                        minutes = startMinute,
-                        blockSize = 13.dp,
-                        digitColor = CharcoalPrimary,
-                        colonColor = SecondaryGray.copy(alpha = 0.7f)
-                    )
+                    val availableWidth = maxWidth
+                    val block = (availableWidth / 33f).coerceIn(6.5.dp, 9.2.dp)
 
-                    // Middle subtle separator indicator
-                    Box(
-                        modifier = Modifier
-                            .size(12.dp)
-                            .clip(RoundedCornerShape(3.dp))
-                            .background(CharcoalPrimary.copy(alpha = 0.6f))
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        DigitalTimerDisplay(
+                            hours = startHour,
+                            minutes = startMinute,
+                            blockSize = block,
+                            digitSpacing = block * 0.5f,
+                            digitColor = CharcoalPrimary,
+                            colonColor = SecondaryGray.copy(alpha = 0.7f)
+                        )
 
-                    DigitalTimerDisplay(
-                        hours = endHour,
-                        minutes = endMinute,
-                        blockSize = 13.dp,
-                        digitColor = CharcoalPrimary,
-                        colonColor = SecondaryGray.copy(alpha = 0.7f)
-                    )
+                        Spacer(modifier = Modifier.width(block * 1.2f))
+
+                        // Middle separator dash
+                        Box(
+                            modifier = Modifier
+                                .size(width = block * 1.5f, height = block * 0.5f)
+                                .clip(RoundedCornerShape(block * 0.25f))
+                                .background(CharcoalPrimary.copy(alpha = 0.6f))
+                        )
+
+                        Spacer(modifier = Modifier.width(block * 1.2f))
+
+                        DigitalTimerDisplay(
+                            hours = endHour,
+                            minutes = endMinute,
+                            blockSize = block,
+                            digitSpacing = block * 0.5f,
+                            digitColor = CharcoalPrimary,
+                            colonColor = SecondaryGray.copy(alpha = 0.7f)
+                        )
+                    }
                 }
 
-                Spacer(modifier = Modifier.height(28.dp))
+                Spacer(modifier = Modifier.height(26.dp))
 
                 // 24-Hour Dotted Timeline Bar
                 Canvas(
@@ -309,8 +323,8 @@ fun RoutinesScreen(
                         text = if (isEnabled) "On" else "Off",
                         fontFamily = GoogleSans,
                         fontSize = 13.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = if (isEnabled) CharcoalPrimary else SecondaryGray
+                        fontWeight = FontWeight.Bold,
+                        color = if (isEnabled) AccentOrange else SecondaryGray
                     )
                     Text(
                         text = " · ",
@@ -464,13 +478,13 @@ fun VerticalOnOffSwitch(
             verticalArrangement = Arrangement.SpaceBetween,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Top Slot: ON
+            // Top Slot: ON (AccentOrange when active)
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(52.dp)
                     .clip(RoundedCornerShape(16.dp))
-                    .background(if (isEnabled) CharcoalPrimary else Color.Transparent)
+                    .background(if (isEnabled) AccentOrange else Color.Transparent)
                     .clickable {
                         if (!isEnabled) {
                             onToggleState(true)
@@ -484,11 +498,11 @@ fun VerticalOnOffSwitch(
                     fontFamily = GoogleSans,
                     fontWeight = FontWeight.Bold,
                     fontSize = 12.sp,
-                    color = if (isEnabled) SurfaceBright else SecondaryGray
+                    color = if (isEnabled) Color.White else SecondaryGray
                 )
             }
 
-            // Bottom Slot: OFF
+            // Bottom Slot: OFF (CharcoalPrimary when inactive)
             Box(
                 modifier = Modifier
                     .fillMaxWidth()

@@ -148,16 +148,19 @@ fun DigitalTimerDisplay(
     modifier: Modifier = Modifier,
     blockSize: Dp = 16.dp,
     digitColor: Color = CharcoalPrimary,
-    colonColor: Color = SecondaryGray
+    colonColor: Color = SecondaryGray,
+    digitSpacing: Dp? = null
 ) {
     val h1 = (hours / 10).coerceIn(0, 9)
     val h2 = (hours % 10).coerceIn(0, 9)
     val m1 = (minutes / 10).coerceIn(0, 9)
     val m2 = (minutes % 10).coerceIn(0, 9)
 
+    val spacing = digitSpacing ?: (blockSize * 0.75f)
+
     Row(
         modifier = modifier,
-        horizontalArrangement = Arrangement.spacedBy(blockSize * 0.75f),
+        horizontalArrangement = Arrangement.spacedBy(spacing),
         verticalAlignment = Alignment.CenterVertically
     ) {
         SquareDigit(digit = h1, blockSize = blockSize, color = digitColor)
@@ -167,3 +170,4 @@ fun DigitalTimerDisplay(
         SquareDigit(digit = m2, blockSize = blockSize, color = digitColor)
     }
 }
+
