@@ -2,15 +2,28 @@ package com.focuslock.app.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-val BackgroundDark = Color(0xFF090A0F)
-val SurfaceDark = Color(0xFF13151F)
-val SurfaceCard = Color(0xFF1C1F2E)
-val PrimaryIndigo = Color(0xFF6366F1)
-val PrimaryIndigoLight = Color(0xFF818CF8)
-val SecondaryEmerald = Color(0xFF10B981)
-val AccentRose = Color(0xFFF43F5E)
-val AccentAmber = Color(0xFFF59E0B)
-val TextPrimary = Color(0xFFF8FAFC)
-val TextSecondary = Color(0xFF94A3B8)
-val TextMuted = Color(0xFF64748B)
-val BorderSubtle = Color(0xFF2E334D)
+val ScreenBackground = Color(0xFFE8E8E8)
+val SurfaceBright = Color(0xFFFFFFFF)
+val SurfaceVariant = Color(0xFFDCDCDC)
+val SurfaceVariantSubtle = Color(0xFFE0E0E0)
+val CharcoalPrimary = Color(0xFF4E4948)
+val CharcoalDark = Color(0xFF2E2A26)
+val SecondaryGray = Color(0xFF858181)
+val SecondaryMuted = Color(0xFFA5A0A0)
+val AccentOrange = Color(0xFFF55314)
+val OutlineSubtle = Color(0x334E4948)
+val OutlineCard = Color(0x1F000000)
+
+// Legacy alias mappings so other screens continue to compile seamlessly
+val BackgroundDark = ScreenBackground
+val SurfaceDark = SurfaceVariant
+val SurfaceCard = SurfaceBright
+val PrimaryIndigo = CharcoalPrimary
+val PrimaryIndigoLight = CharcoalPrimary
+val SecondaryEmerald = AccentOrange
+val AccentRose = AccentOrange
+val AccentAmber = AccentOrange
+val TextPrimary = CharcoalPrimary
+val TextSecondary = SecondaryGray
+val TextMuted = SecondaryMuted
+val BorderSubtle = OutlineSubtle
