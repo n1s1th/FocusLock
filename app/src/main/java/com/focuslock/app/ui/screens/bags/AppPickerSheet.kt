@@ -2,6 +2,7 @@ package com.focuslock.app.ui.screens.bags
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -105,7 +106,7 @@ fun AppPickerSheet(
                     )
                 }
                 // Fix 9: Slot count badge
-                androidx.compose.foundation.layout.Box(
+                Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(12.dp))
                         .background(if (isFull) AccentOrange else CharcoalPrimary.copy(alpha = 0.15f))

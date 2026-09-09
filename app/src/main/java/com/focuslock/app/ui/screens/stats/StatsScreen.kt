@@ -33,6 +33,7 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -378,7 +379,7 @@ fun StatsScreen(
             )
         }
 
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(32.dp))
     }
 }
 
@@ -426,16 +427,18 @@ fun RotaryGaugeView(
     modifier: Modifier = Modifier
 ) {
     val view = LocalView.current
+    val onAngleChangedState by rememberUpdatedState(onAngleChanged)
 
     Canvas(
         modifier = modifier.pointerInput(Unit) {
             detectDragGestures { change, _ ->
+                change.consume()
                 val center = Offset(size.width / 2f, size.height / 2f)
                 val touch = change.position
                 val rad = atan2(touch.y - center.y, touch.x - center.x)
                 var deg = Math.toDegrees(rad.toDouble()).toFloat()
                 if (deg < 0) deg += 360f
-                onAngleChanged(deg)
+                onAngleChangedState(deg)
                 view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
             }
         }

@@ -32,12 +32,14 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -363,7 +365,7 @@ fun RoutinesScreen(
             }
         }
 
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(32.dp))
     }
 }
 
@@ -429,6 +431,8 @@ fun VerticalOnOffSwitch(
     modifier: Modifier = Modifier
 ) {
     val view = LocalView.current
+    val onToggleState by rememberUpdatedState(onToggle)
+    val isEnabledState by rememberUpdatedState(isEnabled)
 
     Card(
         modifier = modifier
@@ -443,14 +447,15 @@ fun VerticalOnOffSwitch(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(4.dp)
-                .pointerInput(isEnabled) {
+                .pointerInput(Unit) {
                     detectVerticalDragGestures(
-                        onVerticalDrag = { _, dragAmount ->
-                            if (dragAmount < -8f && !isEnabled) {
-                                onToggle(true)
+                        onVerticalDrag = { change, dragAmount ->
+                            change.consume()
+                            if (dragAmount < -6f && !isEnabledState) {
+                                onToggleState(true)
                                 view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-                            } else if (dragAmount > 8f && isEnabled) {
-                                onToggle(false)
+                            } else if (dragAmount > 6f && isEnabledState) {
+                                onToggleState(false)
                                 view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
                             }
                         }
@@ -468,7 +473,7 @@ fun VerticalOnOffSwitch(
                     .background(if (isEnabled) CharcoalPrimary else Color.Transparent)
                     .clickable {
                         if (!isEnabled) {
-                            onToggle(true)
+                            onToggleState(true)
                             view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
                         }
                     },
@@ -492,7 +497,7 @@ fun VerticalOnOffSwitch(
                     .background(if (!isEnabled) CharcoalPrimary else Color.Transparent)
                     .clickable {
                         if (isEnabled) {
-                            onToggle(false)
+                            onToggleState(false)
                             view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
                         }
                     },
@@ -521,6 +526,18 @@ fun DraggableDaySlot(
     onStateChanged: (Boolean) -> Unit
 ) {
     val view = LocalView.current
+    val onStateChangedState by rememberUpdatedState(onStateChanged)
+    val isActiveState by rememberUpdatedState(isActive)
+
+    // Smooth animated vertical offset for thumb
+    val thumbOffset by androidx.compose.animation.core.animateDpAsState(
+        targetValue = if (isActive) 0.dp else 30.dp,
+        animationSpec = androidx.compose.animation.core.spring(
+            dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
+            stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow
+        ),
+        label = "daySlotThumbOffset"
+    )
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -541,27 +558,29 @@ fun DraggableDaySlot(
                 .clip(RoundedCornerShape(14.dp))
                 .background(ScreenBackground)
                 .padding(3.dp)
-                .pointerInput(isActive) {
+                .pointerInput(Unit) {
                     detectVerticalDragGestures(
-                        onVerticalDrag = { _, dragAmount ->
-                            if (dragAmount < -6f && !isActive) {
-                                onStateChanged(true)
+                        onVerticalDrag = { change, dragAmount ->
+                            change.consume()
+                            if (dragAmount < -5f && !isActiveState) {
+                                onStateChangedState(true)
                                 view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-                            } else if (dragAmount > 6f && isActive) {
-                                onStateChanged(false)
+                            } else if (dragAmount > 5f && isActiveState) {
+                                onStateChangedState(false)
                                 view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
                             }
                         }
                     )
                 }
                 .clickable {
-                    onStateChanged(!isActive)
+                    onStateChangedState(!isActive)
                     view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
                 },
-            contentAlignment = if (isActive) Alignment.TopCenter else Alignment.BottomCenter
+            contentAlignment = Alignment.TopCenter
         ) {
             Box(
                 modifier = Modifier
+                    .offset(y = thumbOffset)
                     .size(26.dp, 26.dp)
                     .clip(RoundedCornerShape(9.dp))
                     .background(if (isActive) AccentOrange else SecondaryGray.copy(alpha = 0.35f))
@@ -581,7 +600,18 @@ fun RoutineScrollableRuler(
     modifier: Modifier = Modifier
 ) {
     val view = LocalView.current
-    var dragAccumulator by remember { mutableFloatStateOf(0f) }
+    val onMinutesChangedState by rememberUpdatedState(onMinutesChanged)
+
+    var isDragging by remember { mutableStateOf(false) }
+    var currentMinutesFloat by remember { mutableFloatStateOf(totalMinutes.toFloat()) }
+    var lastReportedMinutes by remember { mutableIntStateOf(totalMinutes) }
+
+    LaunchedEffect(totalMinutes) {
+        if (!isDragging) {
+            currentMinutesFloat = totalMinutes.toFloat()
+            lastReportedMinutes = totalMinutes
+        }
+    }
 
     Column(
         modifier = modifier,
@@ -594,19 +624,38 @@ fun RoutineScrollableRuler(
                 .clip(RoundedCornerShape(16.dp))
                 .border(1.dp, OutlineSubtle, RoundedCornerShape(16.dp))
                 .background(Color.Transparent)
-                .pointerInput(totalMinutes) {
+                .pointerInput(Unit) {
+                    val pxPerMinute = 6f
                     detectHorizontalDragGestures(
-                        onHorizontalDrag = { _, dragAmount ->
-                            dragAccumulator += dragAmount
-                            val step = 12f
-                            if (kotlin.math.abs(dragAccumulator) >= step) {
-                                val delta = (dragAccumulator / step).toInt() * 5 // 5-minute increments
-                                val next = (totalMinutes - delta + 1440) % 1440
-                                if (next != totalMinutes) {
-                                    onMinutesChanged(next)
-                                    view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-                                }
-                                dragAccumulator %= step
+                        onDragStart = {
+                            isDragging = true
+                        },
+                        onDragEnd = {
+                            isDragging = false
+                            val snapped = ((currentMinutesFloat / 5f).roundToInt() * 5 + 1440) % 1440
+                            currentMinutesFloat = snapped.toFloat()
+                            if (snapped != lastReportedMinutes) {
+                                lastReportedMinutes = snapped
+                                onMinutesChangedState(snapped)
+                            }
+                        },
+                        onDragCancel = {
+                            isDragging = false
+                            val snapped = ((currentMinutesFloat / 5f).roundToInt() * 5 + 1440) % 1440
+                            currentMinutesFloat = snapped.toFloat()
+                        },
+                        onHorizontalDrag = { change, dragAmount ->
+                            change.consume()
+                            val deltaMinutes = -dragAmount / pxPerMinute
+                            val nextMinutes = (currentMinutesFloat + deltaMinutes + 1440f) % 1440f
+                            currentMinutesFloat = nextMinutes
+
+                            // 5-minute step reporting
+                            val intMinutes = ((nextMinutes / 5f).roundToInt() * 5) % 1440
+                            if (intMinutes != lastReportedMinutes) {
+                                lastReportedMinutes = intMinutes
+                                onMinutesChangedState(intMinutes)
+                                view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
                             }
                         }
                     )
@@ -616,15 +665,14 @@ fun RoutineScrollableRuler(
             Canvas(modifier = Modifier.fillMaxSize()) {
                 val tickSpacing = 8.dp.toPx()
                 val totalTicks = (size.width / tickSpacing).toInt() + 4
-                val offsetFraction = (totalMinutes % 60) / 60f
-                val scrollOffset = offsetFraction * tickSpacing * 4
+                val scrollOffset = currentMinutesFloat * tickSpacing * 0.5f
 
                 for (i in -totalTicks..totalTicks) {
                     val x = (size.width / 2f) + (i * tickSpacing) - (scrollOffset % tickSpacing)
                     if (x in 6.dp.toPx()..(size.width - 6.dp.toPx())) {
                         val isMajor = (i % 4 == 0)
                         drawLine(
-                            color = SecondaryGray.copy(alpha = if (isMajor) 0.4f else 0.2f),
+                            color = SecondaryGray.copy(alpha = if (isMajor) 0.45f else 0.2f),
                             start = Offset(x, size.height * (if (isMajor) 0.18f else 0.28f)),
                             end = Offset(x, size.height * (if (isMajor) 0.82f else 0.72f)),
                             strokeWidth = if (isMajor) 2.dp.toPx() else 1.2.dp.toPx(),
@@ -658,10 +706,9 @@ fun RoutineScrollableRuler(
             text = label,
             fontFamily = GoogleSans,
             fontWeight = FontWeight.Bold,
-            fontSize = 10.sp,
-            letterSpacing = 1.sp,
-            color = SecondaryGray
+            fontSize = 11.sp,
+            color = SecondaryGray,
+            letterSpacing = 1.sp
         )
     }
 }
-

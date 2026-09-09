@@ -411,7 +411,7 @@ fun HomeScreen(
             text = "SLIDE TO START"
         )
 
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(32.dp))
     }
 }
 

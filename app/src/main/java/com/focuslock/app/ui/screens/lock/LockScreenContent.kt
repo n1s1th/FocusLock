@@ -3,6 +3,7 @@ package com.focuslock.app.ui.screens.lock
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
+import android.view.HapticFeedbackConstants
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
@@ -51,6 +52,7 @@ import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -60,9 +62,11 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
@@ -456,16 +460,16 @@ fun LockScreenContent(
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Fix 8: Show all 6 allowed app slots
+                    // All 6 allowed app slots - responsive row
                     val allowedPackages = (bagEntity?.allowedPackages ?: emptyList()).filter { it.isNotBlank() }
                     Row(
                         modifier = Modifier
                             .weight(1f)
-                            .height(56.dp)
-                            .clip(RoundedCornerShape(28.dp))
+                            .height(52.dp)
+                            .clip(RoundedCornerShape(26.dp))
                             .background(CardBackgroundDark)
-                            .padding(horizontal = 10.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            .padding(horizontal = 8.dp),
+                        horizontalArrangement = Arrangement.SpaceEvenly,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         for (i in 0..5) {
@@ -486,12 +490,12 @@ fun LockScreenContent(
                         }
                     }
 
-                    Spacer(modifier = Modifier.width(10.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
 
                     // White Emergency Phone Button
                     Box(
                         modifier = Modifier
-                            .size(56.dp)
+                            .size(52.dp)
                             .clip(CircleShape)
                             .background(Color.White)
                             .clickable {
@@ -504,11 +508,11 @@ fun LockScreenContent(
                             painter = painterResource(id = R.drawable.ic_phone),
                             contentDescription = "Emergency Phone",
                             tint = Color.Black,
-                            modifier = Modifier.size(24.dp)
+                            modifier = Modifier.size(22.dp)
                         )
                     }
                 }
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(16.dp))
             }
         }
 
@@ -608,10 +612,15 @@ fun LockScreenContent(
 fun SlideToExitTrack(
     onTriggerExit: () -> Unit
 ) {
-    // Fix 7: Real horizontal drag gesture — must slide 75% across to trigger exit
+    val view = LocalView.current
     val scope = rememberCoroutineScope()
-    val offsetX = remember { androidx.compose.animation.core.Animatable(0f) }
     val density = LocalDensity.current
+    val onTriggerExitState by rememberUpdatedState(onTriggerExit)
+
+    var isDragging by remember { mutableStateOf(false) }
+    var dragOffsetX by remember { mutableFloatStateOf(0f) }
+    val animOffsetX = remember { androidx.compose.animation.core.Animatable(0f) }
+    var hasTriggeredThresholdHaptic by remember { mutableStateOf(false) }
 
     val containerHeight = 64.dp
     val handleWidth = 62.dp
@@ -628,12 +637,17 @@ fun SlideToExitTrack(
         contentAlignment = Alignment.CenterStart
     ) {
         val maxDragPx = with(density) {
-            (maxWidth - handleWidth - trackPadding * 2).toPx()
+            (maxWidth - handleWidth - trackPadding * 2).toPx().coerceAtLeast(1f)
         }
 
-        // Background label
+        val currentOffset = if (isDragging) dragOffsetX else animOffsetX.value
+        val progress = (currentOffset / maxDragPx).coerceIn(0f, 1f)
+
+        // Background label (fades as handle slides over)
         Box(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer { alpha = (1f - progress * 1.5f).coerceIn(0f, 1f) },
             contentAlignment = Alignment.Center
         ) {
             Text(
@@ -649,28 +663,69 @@ fun SlideToExitTrack(
         // Draggable parachute knob
         Box(
             modifier = Modifier
-                .offset { IntOffset(offsetX.value.roundToInt(), 0) }
+                .offset { IntOffset(currentOffset.roundToInt(), 0) }
                 .width(handleWidth)
                 .height(handleHeight)
                 .clip(RoundedCornerShape(24.dp))
                 .background(CardAccentHandle)
-                .pointerInput(maxDragPx) {
+                .pointerInput(Unit) {
                     detectHorizontalDragGestures(
+                        onDragStart = {
+                            isDragging = true
+                            dragOffsetX = animOffsetX.value
+                            hasTriggeredThresholdHaptic = false
+                        },
                         onDragEnd = {
+                            isDragging = false
                             scope.launch {
-                                if (offsetX.value >= maxDragPx * 0.75f) {
-                                    // Committed: slide fully right then trigger
-                                    offsetX.animateTo(maxDragPx, androidx.compose.animation.core.tween(120))
-                                    onTriggerExit()
+                                if (dragOffsetX >= maxDragPx * 0.75f) {
+                                    view.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
+                                    animOffsetX.snapTo(dragOffsetX)
+                                    animOffsetX.animateTo(maxDragPx, androidx.compose.animation.core.tween(120))
+                                    onTriggerExitState()
+                                    animOffsetX.snapTo(0f)
+                                    dragOffsetX = 0f
+                                } else {
+                                    animOffsetX.snapTo(dragOffsetX)
+                                    animOffsetX.animateTo(
+                                        targetValue = 0f,
+                                        animationSpec = androidx.compose.animation.core.spring(
+                                            dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
+                                            stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow
+                                        )
+                                    )
+                                    dragOffsetX = 0f
                                 }
-                                // Snap back to start
-                                offsetX.animateTo(0f, androidx.compose.animation.core.tween(280))
+                                hasTriggeredThresholdHaptic = false
                             }
                         },
-                        onHorizontalDrag = { _, dragAmount ->
+                        onDragCancel = {
+                            isDragging = false
                             scope.launch {
-                                val next = (offsetX.value + dragAmount).coerceIn(0f, maxDragPx)
-                                offsetX.snapTo(next)
+                                animOffsetX.snapTo(dragOffsetX)
+                                animOffsetX.animateTo(
+                                    targetValue = 0f,
+                                    animationSpec = androidx.compose.animation.core.spring(
+                                        dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
+                                        stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow
+                                    )
+                                )
+                                dragOffsetX = 0f
+                                hasTriggeredThresholdHaptic = false
+                            }
+                        },
+                        onHorizontalDrag = { change, dragAmount ->
+                            change.consume()
+                            val next = (dragOffsetX + dragAmount).coerceIn(0f, maxDragPx)
+                            dragOffsetX = next
+
+                            if (next >= maxDragPx * 0.75f) {
+                                if (!hasTriggeredThresholdHaptic) {
+                                    view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                                    hasTriggeredThresholdHaptic = true
+                                }
+                            } else {
+                                hasTriggeredThresholdHaptic = false
                             }
                         }
                     )
@@ -711,7 +766,7 @@ fun AllowedAppCircle(
 
     Box(
         modifier = Modifier
-            .size(38.dp)
+            .size(34.dp)
             .clip(CircleShape)
             .background(CardAccentHandle)
             .clickable { onClick() },
@@ -730,7 +785,7 @@ fun AllowedAppCircle(
                 bitmap = bitmap,
                 contentDescription = appLabel,
                 modifier = Modifier
-                    .size(28.dp)
+                    .size(24.dp)
                     .clip(CircleShape)
             )
         } else {
@@ -738,7 +793,7 @@ fun AllowedAppCircle(
                 text = appLabel.take(1).uppercase(),
                 fontFamily = GoogleSans,
                 fontWeight = FontWeight.Bold,
-                fontSize = 14.sp,
+                fontSize = 12.sp,
                 color = Color.White
             )
         }
@@ -747,7 +802,7 @@ fun AllowedAppCircle(
 
 @Composable
 fun EmptyAllowedSlotCircle() {
-    Canvas(modifier = Modifier.size(36.dp)) {
+    Canvas(modifier = Modifier.size(32.dp)) {
         val strokeWidth = 1.2.dp.toPx()
         val radius = (size.minDimension - strokeWidth) / 2
         val center = Offset(size.width / 2, size.height / 2)
