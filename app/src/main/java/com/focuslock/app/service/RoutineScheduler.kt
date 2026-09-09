@@ -71,11 +71,11 @@ class RoutineScheduler(private val context: Context) {
             set(Calendar.MILLISECOND, 0)
         }
 
-        // Check next 7 days for matching day of week in bitmask
+        // Check next 7 days for matching day of week in bitmask (Sun=0..Sat=6)
         for (i in 0..7) {
             if (i > 0 || target.after(now)) {
                 val dayOfWeek = target.get(Calendar.DAY_OF_WEEK) // 1=Sun, 2=Mon... 7=Sat
-                val dayBit = 1 shl ((dayOfWeek + 5) % 7) // Convert to Mon(0)..Sun(6)
+                val dayBit = 1 shl (dayOfWeek - 1) // Sun=0, Mon=1, ..., Sat=6
                 if ((daysMask and dayBit) != 0) {
                     return target.timeInMillis
                 }

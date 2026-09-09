@@ -24,39 +24,105 @@ class RoutinesViewModel(application: Application) : AndroidViewModel(application
     val bags: StateFlow<List<BagEntity>> = app.database.bagDao().getAllBagsFlow()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    fun createRoutine(
-        name: String,
-        targetBagId: Long,
-        startHour: Int,
-        startMinute: Int,
-        durationMinutes: Int,
-        daysMask: Int
-    ) {
+    val currentStreak: Int
+        get() = app.preferences.getCurrentStreak()
+
+    val totalParachutes: Int
+        get() = app.preferences.getTotalParachutes()
+
+    init {
+        ensureDefaultRoutines()
+    }
+
+    private fun ensureDefaultRoutines() {
         viewModelScope.launch(Dispatchers.IO) {
-            val entity = RoutineEntity(
-                name = name,
-                targetBagId = targetBagId,
-                startHour = startHour,
-                startMinute = startMinute,
-                durationMinutes = durationMinutes,
-                activeDaysMask = daysMask,
-                isEnabled = true
-            )
-            val id = app.database.routineDao().insertRoutine(entity)
-            scheduler.scheduleRoutine(entity.copy(id = id))
+            val dao = app.database.routineDao()
+            val existing = dao.getAllRoutinesFlow()
+            val list = dao.getActiveRoutines()
+            val all = app.database.routineDao().getRoutineById(1L)
+            // If fewer than 3 routines, populate Routine 1, 2, 3
+            if (all == null) {
+                dao.insertRoutine(
+                    RoutineEntity(
+                        id = 1,
+                        name = "Routine 1",
+                        targetBagId = 1L,
+                        startHour = 0,
+                        startMinute = 0,
+                        durationMinutes = 60,
+                        activeDaysMask = 127,
+                        isEnabled = false
+                    )
+                )
+                dao.insertRoutine(
+                    RoutineEntity(
+                        id = 2,
+                        name = "Routine 2",
+                        targetBagId = 1L,
+                        startHour = 0,
+                        startMinute = 0,
+                        durationMinutes = 60,
+                        activeDaysMask = 127,
+                        isEnabled = false
+                    )
+                )
+                dao.insertRoutine(
+                    RoutineEntity(
+                        id = 3,
+                        name = "Routine 3",
+                        targetBagId = 1L,
+                        startHour = 0,
+                        startMinute = 0,
+                        durationMinutes = 60,
+                        activeDaysMask = 127,
+                        isEnabled = false
+                    )
+                )
+            }
         }
     }
 
-    fun toggleRoutine(routine: RoutineEntity) {
+    fun updateRoutineTimes(routine: RoutineEntity, startHour: Int, startMinute: Int, endHour: Int, endMinute: Int) {
         viewModelScope.launch(Dispatchers.IO) {
-            val newEnabled = !routine.isEnabled
-            app.database.routineDao().toggleRoutine(routine.id, newEnabled)
-            if (newEnabled) {
-                scheduler.scheduleRoutine(routine.copy(isEnabled = true))
+            val startTotal = startHour * 60 + startMinute
+            val endTotal = endHour * 60 + endMinute
+            val duration = if (endTotal >= startTotal) (endTotal - startTotal) else (24 * 60 - startTotal + endTotal)
+            val updated = routine.copy(
+                startHour = startHour,
+                startMinute = startMinute,
+                durationMinutes = maxOf(15, duration)
+            )
+            app.database.routineDao().updateRoutine(updated)
+            if (updated.isEnabled) {
+                scheduler.scheduleRoutine(updated)
+            }
+        }
+    }
+
+    fun updateRoutineDays(routine: RoutineEntity, daysMask: Int) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val updated = routine.copy(activeDaysMask = daysMask)
+            app.database.routineDao().updateRoutine(updated)
+            if (updated.isEnabled) {
+                scheduler.scheduleRoutine(updated)
+            }
+        }
+    }
+
+    fun setRoutineEnabled(routine: RoutineEntity, enabled: Boolean) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val updated = routine.copy(isEnabled = enabled)
+            app.database.routineDao().updateRoutine(updated)
+            if (enabled) {
+                scheduler.scheduleRoutine(updated)
             } else {
                 scheduler.cancelRoutine(routine.id)
             }
         }
+    }
+
+    fun toggleRoutine(routine: RoutineEntity) {
+        setRoutineEnabled(routine, !routine.isEnabled)
     }
 
     fun deleteRoutine(routine: RoutineEntity) {
