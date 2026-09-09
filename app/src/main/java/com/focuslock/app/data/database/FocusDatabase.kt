@@ -59,47 +59,33 @@ abstract class FocusDatabase : RoomDatabase() {
             }
 
             suspend fun populateInitialData(bagDao: BagDao) {
-                // Pre-seed default Bags
+                // Pre-seed 3 empty default Bags
                 bagDao.insertBag(
                     BagEntity(
-                        name = "Deep Focus",
+                        name = "Bag 1",
                         iconName = "Work",
-                        colorHex = "#6366F1",
-                        allowedPackages = listOf(
-                            "com.google.android.dialer",
-                            "com.android.dialer",
-                            "com.google.android.deskclock",
-                            "com.android.deskclock",
-                            "com.google.android.calculator",
-                            "com.android.calculator2"
-                        ),
+                        colorHex = "#FF5500",
+                        allowedPackages = emptyList(),
                         isDefault = true
                     )
                 )
 
                 bagDao.insertBag(
                     BagEntity(
-                        name = "Study & Read",
+                        name = "Bag 2",
                         iconName = "Book",
-                        colorHex = "#10B981",
-                        allowedPackages = listOf(
-                            "com.google.android.apps.docs",
-                            "com.google.android.keep",
-                            "com.google.android.apps.books"
-                        ),
+                        colorHex = "#1F1E1D",
+                        allowedPackages = emptyList(),
                         isDefault = false
                     )
                 )
 
                 bagDao.insertBag(
                     BagEntity(
-                        name = "Minimalist Phone",
+                        name = "Bag 3",
                         iconName = "Lock",
-                        colorHex = "#EC4899",
-                        allowedPackages = listOf(
-                            "com.google.android.dialer",
-                            "com.android.dialer"
-                        ),
+                        colorHex = "#1F1E1D",
+                        allowedPackages = emptyList(),
                         isDefault = false
                     )
                 )

@@ -41,6 +41,127 @@ class AppPreferences(context: Context) {
 
     fun getLastActiveDate(): String = prefs.getString(KEY_LAST_ACTIVE_DATE, "") ?: ""
 
+    // -------------------------------------------------------------
+    // PARACHUTE SYSTEM (100% Free - Weekly + 5-Hour Countdown)
+    // -------------------------------------------------------------
+    private val _parachutesStateFlow = MutableStateFlow(getTotalParachutes())
+    val parachutesStateFlow: StateFlow<Int> = _parachutesStateFlow.asStateFlow()
+
+    /**
+     * Weekly Free Parachute:
+     * User gets 1 free parachute per 7-day cycle.
+     * Unused parachutes are discarded at the end of each week (they do not accumulate).
+     * If used, 0 is available until the next 7-day cycle starts.
+     */
+    fun getWeeklyParachuteCount(): Int {
+        val now = System.currentTimeMillis()
+        val weekStart = prefs.getLong(KEY_PARACHUTE_WEEK_START, 0L)
+        if (weekStart == 0L || (now - weekStart) >= ONE_WEEK_MILLIS) {
+            // New weekly cycle: reset weekly parachute to 1 available
+            prefs.edit()
+                .putLong(KEY_PARACHUTE_WEEK_START, now)
+                .putBoolean(KEY_WEEKLY_PARACHUTE_USED, false)
+                .apply()
+            return 1
+        }
+        val isUsed = prefs.getBoolean(KEY_WEEKLY_PARACHUTE_USED, false)
+        return if (isUsed) 0 else 1
+    }
+
+    fun isWeeklyParachuteAvailable(): Boolean = getWeeklyParachuteCount() > 0
+
+    fun getWeeklyParachuteRemainingMillis(): Long {
+        val now = System.currentTimeMillis()
+        val weekStart = prefs.getLong(KEY_PARACHUTE_WEEK_START, 0L)
+        if (weekStart == 0L) return ONE_WEEK_MILLIS
+        val elapsed = now - weekStart
+        return maxOf(0L, ONE_WEEK_MILLIS - elapsed)
+    }
+
+    /**
+     * Extra requested parachutes earned via 5-hour cooldown timer.
+     */
+    fun getRequestedParachuteCount(): Int {
+        return prefs.getInt(KEY_REQUESTED_PARACHUTE_COUNT, 0)
+    }
+
+    fun getTotalParachutes(): Int {
+        return getWeeklyParachuteCount() + getRequestedParachuteCount()
+    }
+
+    fun notifyParachutesChanged() {
+        _parachutesStateFlow.value = getTotalParachutes()
+    }
+
+    /**
+     * Consumes 1 parachute if available (weekly parachute first, then extra requested).
+     * Returns true if successfully consumed, false if balance is 0.
+     */
+    fun useParachute(): Boolean {
+        if (getWeeklyParachuteCount() > 0) {
+            prefs.edit().putBoolean(KEY_WEEKLY_PARACHUTE_USED, true).apply()
+            notifyParachutesChanged()
+            return true
+        } else if (getRequestedParachuteCount() > 0) {
+            val current = getRequestedParachuteCount()
+            prefs.edit().putInt(KEY_REQUESTED_PARACHUTE_COUNT, maxOf(0, current - 1)).apply()
+            notifyParachutesChanged()
+            return true
+        }
+        return false
+    }
+
+    /**
+     * 5-Hour Countdown extra parachute request.
+     */
+    fun getParachuteRequestTimestamp(): Long {
+        return prefs.getLong(KEY_PARACHUTE_REQUEST_TIME, 0L)
+    }
+
+    fun isParachuteRequestActive(): Boolean {
+        val reqTime = getParachuteRequestTimestamp()
+        if (reqTime <= 0L) return false
+        val elapsed = System.currentTimeMillis() - reqTime
+        return elapsed < PARACHUTE_COOLDOWN_MILLIS
+    }
+
+    fun isParachuteRequestReady(): Boolean {
+        val reqTime = getParachuteRequestTimestamp()
+        if (reqTime <= 0L) return false
+        val elapsed = System.currentTimeMillis() - reqTime
+        return elapsed >= PARACHUTE_COOLDOWN_MILLIS
+    }
+
+    fun getParachuteRequestRemainingMillis(): Long {
+        val reqTime = getParachuteRequestTimestamp()
+        if (reqTime <= 0L) return 0L
+        val target = reqTime + PARACHUTE_COOLDOWN_MILLIS
+        return maxOf(0L, target - System.currentTimeMillis())
+    }
+
+    fun requestParachute(): Boolean {
+        if (isParachuteRequestActive()) return false
+        prefs.edit()
+            .putLong(KEY_PARACHUTE_REQUEST_TIME, System.currentTimeMillis())
+            .apply()
+        return true
+    }
+
+    fun claimRequestedParachute(): Boolean {
+        if (!isParachuteRequestReady()) return false
+        val current = getRequestedParachuteCount()
+        prefs.edit()
+            .putInt(KEY_REQUESTED_PARACHUTE_COUNT, current + 1)
+            .putLong(KEY_PARACHUTE_REQUEST_TIME, 0L)
+            .apply()
+        notifyParachutesChanged()
+        return true
+    }
+
+    fun cancelParachuteRequest() {
+        prefs.edit().putLong(KEY_PARACHUTE_REQUEST_TIME, 0L).apply()
+    }
+
     fun startSession(endTimeMillis: Long, durationMinutes: Int, bagId: Long, bagName: String) {
         prefs.edit()
             .putLong(KEY_SESSION_END_MILLIS, endTimeMillis)
@@ -121,5 +242,16 @@ class AppPreferences(context: Context) {
         private const val KEY_HAPTICS_ENABLED = "haptics_enabled"
         private const val KEY_CURRENT_STREAK = "current_streak"
         private const val KEY_LAST_ACTIVE_DATE = "last_active_date"
+
+        // Parachute preferences
+        private const val KEY_PARACHUTE_WEEK_START = "parachute_week_start"
+        private const val KEY_WEEKLY_PARACHUTE_USED = "weekly_parachute_used"
+        private const val KEY_REQUESTED_PARACHUTE_COUNT = "requested_parachute_count"
+        private const val KEY_PARACHUTE_REQUEST_TIME = "parachute_request_time"
+
+        // 7 days in milliseconds
+        const val ONE_WEEK_MILLIS = 7L * 24 * 60 * 60 * 1000L
+        // 5 hours cooldown in milliseconds
+        const val PARACHUTE_COOLDOWN_MILLIS = 5L * 60 * 60 * 1000L
     }
 }

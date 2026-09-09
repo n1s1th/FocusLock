@@ -94,8 +94,17 @@ fun ThreeBagsRowDisplay(
         horizontalArrangement = Arrangement.spacedBy(24.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        SingleBagPixelArt(isSelected = selectedIndex == 0, pixelSize = 5.5.dp)
-        SingleBagPixelArt(isSelected = selectedIndex == 1, pixelSize = 5.5.dp)
-        SingleBagPixelArt(isSelected = selectedIndex == 2, pixelSize = 5.5.dp)
+        SingleBagPixelArt(
+            isSelected = selectedIndex == 0,
+            pixelSize = 5.5.dp
+        )
+        SingleBagPixelArt(
+            isSelected = selectedIndex == 1,
+            pixelSize = 5.5.dp
+        )
+        SingleBagPixelArt(
+            isSelected = selectedIndex == 2,
+            pixelSize = 5.5.dp
+        )
     }
 }
