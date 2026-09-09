@@ -1,20 +1,24 @@
 package com.focuslock.app.ui.screens.lock
 
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.net.Uri
 import android.view.HapticFeedbackConstants
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
-import androidx.compose.foundation.gestures.draggable
-import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -32,8 +36,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -59,10 +61,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -80,6 +82,7 @@ import com.focuslock.app.service.FocusLockService
 import com.focuslock.app.ui.screens.home.components.BlockLogoView
 import com.focuslock.app.ui.screens.home.components.DigitalTimerDisplay
 import com.focuslock.app.ui.screens.home.components.SquareDigit
+import com.focuslock.app.ui.screens.lock.components.DoneScreenContent
 import com.focuslock.app.ui.theme.AccentOrange
 import com.focuslock.app.ui.theme.GoogleSans
 import kotlinx.coroutines.delay
@@ -92,6 +95,8 @@ import kotlin.math.roundToInt
 private val CardBackgroundDark = Color(0xFF191817)
 private val CardMutedText = Color(0xFF8E8D8A)
 private val CardAccentHandle = Color(0xFF454341)
+private val HandleBackground = Color(0xFF6C6966)
+private val HandleIconColor = Color(0xFF2B2928)
 
 @Composable
 fun LockScreenContent(
@@ -104,8 +109,45 @@ fun LockScreenContent(
     var bagEntity by remember { mutableStateOf<BagEntity?>(null) }
     var showEmergencyDialog by remember { mutableStateOf(false) }
     var showNoParachuteDialog by remember { mutableStateOf(false) }
+    var isSessionCompleted by remember { mutableStateOf(false) }
+
+    // Initial session info preserved for Done screen
+    val plannedDurationMinutes = remember {
+        app.preferences.getSessionTotalDurationMinutes().coerceAtLeast(1)
+    }
+    val todayDateString = remember {
+        SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
+    }
+    val todayMinutesFlow = remember {
+        app.database.sessionDao().getTotalFocusMinutesForDate(todayDateString)
+    }
+    val todayMinutesState by todayMinutesFlow.collectAsState(initial = 0)
+    val todayFocusMinutes = (todayMinutesState ?: 0).coerceAtLeast(plannedDurationMinutes)
+    val currentStreak = remember { app.preferences.getCurrentStreak().coerceAtLeast(1) }
 
     val totalParachutes by app.preferences.parachutesStateFlow.collectAsState()
+
+    // Screensaver / Ambient Floating Mode State
+    var isAmbientMode by remember { mutableStateOf(false) }
+    var lastInteractionTime by remember { mutableLongStateOf(System.currentTimeMillis()) }
+
+    fun registerUserInteraction() {
+        lastInteractionTime = System.currentTimeMillis()
+        if (isAmbientMode) {
+            isAmbientMode = false
+        }
+    }
+
+    // Inactivity detection: after 6 seconds of no touch, smoothly enter ambient mode
+    LaunchedEffect(isAmbientMode, isSessionCompleted) {
+        if (isSessionCompleted) return@LaunchedEffect
+        while (true) {
+            delay(1000L)
+            if (!isAmbientMode && (System.currentTimeMillis() - lastInteractionTime >= 6000L)) {
+                isAmbientMode = true
+            }
+        }
+    }
 
     // Live countdown loop
     LaunchedEffect(Unit) {
@@ -116,12 +158,25 @@ fun LockScreenContent(
             val endMillis = app.preferences.getSessionEndTimeMillis()
             val remaining = endMillis - System.currentTimeMillis()
             if (remaining <= 0) {
-                onExitLock()
+                // Focus session successfully completed! Show DONE screen
+                FocusLockService.stopService(context)
+                isSessionCompleted = true
                 break
             }
             remainingMillis = remaining
             delay(250L)
         }
+    }
+
+    // If session has finished successfully, show the DONE Completion Screen
+    if (isSessionCompleted) {
+        DoneScreenContent(
+            sessionMinutes = plannedDurationMinutes,
+            todayMinutes = todayFocusMinutes,
+            streak = currentStreak,
+            onDoneClick = onExitLock
+        )
+        return
     }
 
     val totalSeconds = (remainingMillis / 1000).toInt()
@@ -140,10 +195,77 @@ fun LockScreenContent(
         }
     }
 
+    // Ambient floating animations
+    val infiniteTransition = rememberInfiniteTransition(label = "ambientFloating")
+    val floatY by infiniteTransition.animateFloat(
+        initialValue = -10f,
+        targetValue = 10f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 3600, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "floatY"
+    )
+    val floatX by infiniteTransition.animateFloat(
+        initialValue = -6f,
+        targetValue = 6f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 4800, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "floatX"
+    )
+
+    val animFloatX by animateFloatAsState(
+        targetValue = if (isAmbientMode) floatX else 0f,
+        animationSpec = tween(500),
+        label = "animFloatX"
+    )
+    val animFloatY by animateFloatAsState(
+        targetValue = if (isAmbientMode) floatY else 0f,
+        animationSpec = tween(500),
+        label = "animFloatY"
+    )
+
+    // Smooth fade for non-timing UI elements in ambient mode
+    val ambientAlpha by animateFloatAsState(
+        targetValue = if (isAmbientMode) 0f else 1f,
+        animationSpec = tween(450),
+        label = "ambientAlpha"
+    )
+
+    // Animated container background and digit colors for timing cards
+    val timerCardBg by animateColorAsState(
+        targetValue = if (isAmbientMode) Color.Black else CardBackgroundDark,
+        animationSpec = tween(450),
+        label = "timerCardBg"
+    )
+    val timerDigitColor by animateColorAsState(
+        targetValue = if (isAmbientMode) Color(0xFF6E6A66) else Color.White,
+        animationSpec = tween(450),
+        label = "timerDigitColor"
+    )
+    val timerColonColor by animateColorAsState(
+        targetValue = if (isAmbientMode) Color(0xFF4A4744) else CardMutedText,
+        animationSpec = tween(450),
+        label = "timerColonColor"
+    )
+    val timerBorder = if (isAmbientMode) BorderStroke(1.dp, Color(0xFF262422)) else null
+
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.Black)
+            .pointerInput(Unit) {
+                awaitPointerEventScope {
+                    while (true) {
+                        val event = awaitPointerEvent(PointerEventPass.Initial)
+                        if (event.changes.any { it.pressed }) {
+                            registerUserInteraction()
+                        }
+                    }
+                }
+            }
             .padding(horizontal = 16.dp, vertical = 20.dp)
     ) {
         Column(
@@ -153,23 +275,31 @@ fun LockScreenContent(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.SpaceBetween
         ) {
-            // 1. TOP LOGO
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Spacer(modifier = Modifier.height(10.dp))
+
+                // 1. TOP LOGO (fades out in ambient screensaver mode)
                 BlockLogoView(
+                    modifier = Modifier.graphicsLayer { alpha = ambientAlpha },
                     pixelSize = 4.8.dp,
                     color = Color.White,
                     pulseColor = AccentOrange
                 )
+
                 Spacer(modifier = Modifier.height(20.dp))
 
-                // 2. BIG DIGITAL TIMER CARD (HH:MM / MM:SS)
+                // 2. BIG DIGITAL TIMER CARD (HH:MM / MM:SS) - Floating in ambient mode
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(148.dp),
+                        .height(152.dp)
+                        .graphicsLayer {
+                            translationX = animFloatX
+                            translationY = animFloatY
+                        },
                     shape = RoundedCornerShape(28.dp),
-                    colors = CardDefaults.cardColors(containerColor = CardBackgroundDark),
+                    colors = CardDefaults.cardColors(containerColor = timerCardBg),
+                    border = timerBorder,
                     elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                 ) {
                     Box(
@@ -180,31 +310,36 @@ fun LockScreenContent(
                             hours = displayHours,
                             minutes = displayMinutes,
                             blockSize = 16.dp,
-                            digitColor = Color.White,
-                            colonColor = CardMutedText
+                            digitColor = timerDigitColor,
+                            colonColor = timerColonColor
                         )
                     }
                 }
 
                 Spacer(modifier = Modifier.height(14.dp))
 
-                // 3. MIDDLE 2-COLUMN SECTION
+                // 3. MIDDLE 2-COLUMN SECTION (Balanced & perfectly aligned)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    // LEFT COLUMN
+                    // LEFT COLUMN (Total height: 176 + 8 + 46 + 8 + 46 = 284.dp)
                     Column(
                         modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        // Seconds Tile
+                        // Seconds Tile - Floating with the top timer in ambient mode
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(176.dp),
+                                .height(176.dp)
+                                .graphicsLayer {
+                                    translationX = animFloatX
+                                    translationY = animFloatY
+                                },
                             shape = RoundedCornerShape(26.dp),
-                            colors = CardDefaults.cardColors(containerColor = CardBackgroundDark),
+                            colors = CardDefaults.cardColors(containerColor = timerCardBg),
+                            border = timerBorder,
                             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                         ) {
                             Column(
@@ -220,8 +355,8 @@ fun LockScreenContent(
                                 ) {
                                     val s1 = displaySeconds / 10
                                     val s2 = displaySeconds % 10
-                                    SquareDigit(digit = s1, blockSize = 15.dp, color = Color.White)
-                                    SquareDigit(digit = s2, blockSize = 15.dp, color = Color.White)
+                                    SquareDigit(digit = s1, blockSize = 15.dp, color = timerDigitColor)
+                                    SquareDigit(digit = s2, blockSize = 15.dp, color = timerDigitColor)
                                 }
                                 Spacer(modifier = Modifier.height(12.dp))
                                 Text(
@@ -229,17 +364,18 @@ fun LockScreenContent(
                                     fontFamily = GoogleSans,
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 13.sp,
-                                    color = CardMutedText,
+                                    color = if (isAmbientMode) Color(0xFF4A4744) else CardMutedText,
                                     letterSpacing = 2.sp
                                 )
                             }
                         }
 
-                        // Ends Time Pill
+                        // Ends Time Pill (fades out in ambient mode)
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(46.dp),
+                                .height(46.dp)
+                                .graphicsLayer { alpha = ambientAlpha },
                             shape = RoundedCornerShape(23.dp),
                             colors = CardDefaults.cardColors(containerColor = CardBackgroundDark),
                             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
@@ -270,11 +406,12 @@ fun LockScreenContent(
                             }
                         }
 
-                        // Parachutes Count Pill
+                        // Parachutes Count Pill (fades out in ambient mode)
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(46.dp),
+                                .height(46.dp)
+                                .graphicsLayer { alpha = ambientAlpha },
                             shape = RoundedCornerShape(23.dp),
                             colors = CardDefaults.cardColors(containerColor = CardBackgroundDark),
                             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
@@ -314,10 +451,12 @@ fun LockScreenContent(
                         }
                     }
 
-                    // RIGHT COLUMN
+                    // RIGHT COLUMN (Total height: 176 + 8 + 100 = 284.dp, fades out in ambient mode)
                     Column(
-                        modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                        modifier = Modifier
+                            .weight(1f)
+                            .graphicsLayer { alpha = ambientAlpha },
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         // +15 min Extension Card
                         Card(
@@ -326,16 +465,18 @@ fun LockScreenContent(
                                 .height(176.dp)
                                 .clip(RoundedCornerShape(26.dp))
                                 .clickable {
-                                    // Add 15 minutes extension to active session
-                                    val currentEnd = app.preferences.getSessionEndTimeMillis()
-                                    val newEnd = currentEnd + (15 * 60 * 1000L)
-                                    val totalMin = app.preferences.getSessionTotalDurationMinutes() + 15
-                                    app.preferences.startSession(
-                                        endTimeMillis = newEnd,
-                                        durationMinutes = totalMin,
-                                        bagId = app.preferences.getActiveBagId(),
-                                        bagName = app.preferences.getActiveBagName()
-                                    )
+                                    if (!isAmbientMode) {
+                                        // Add 15 minutes extension to active session
+                                        val currentEnd = app.preferences.getSessionEndTimeMillis()
+                                        val newEnd = currentEnd + (15 * 60 * 1000L)
+                                        val totalMin = app.preferences.getSessionTotalDurationMinutes() + 15
+                                        app.preferences.startSession(
+                                            endTimeMillis = newEnd,
+                                            durationMinutes = totalMin,
+                                            bagId = app.preferences.getActiveBagId(),
+                                            bagName = app.preferences.getActiveBagName()
+                                        )
+                                    }
                                 },
                             shape = RoundedCornerShape(26.dp),
                             colors = CardDefaults.cardColors(containerColor = CardBackgroundDark),
@@ -382,7 +523,7 @@ fun LockScreenContent(
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(102.dp),
+                                .height(100.dp),
                             shape = RoundedCornerShape(26.dp),
                             colors = CardDefaults.cardColors(containerColor = CardBackgroundDark),
                             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
@@ -434,11 +575,13 @@ fun LockScreenContent(
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(14.dp))
 
             // 4. BOTTOM ACTION SECTION (Slide to Exit + Allowed Apps Dock)
             Column(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .graphicsLayer { alpha = ambientAlpha },
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 // Emergency Exit Slider
@@ -452,35 +595,36 @@ fun LockScreenContent(
                     }
                 )
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(14.dp))
 
-                // Bottom Allowed Apps Dock & Emergency Dialer
+                // Bottom Allowed Apps Dock (3 slots matching Screenshot 1) & Emergency Dialer
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // All 6 allowed app slots - responsive row
                     val allowedPackages = (bagEntity?.allowedPackages ?: emptyList()).filter { it.isNotBlank() }
                     Row(
                         modifier = Modifier
                             .weight(1f)
-                            .height(52.dp)
-                            .clip(RoundedCornerShape(26.dp))
+                            .height(54.dp)
+                            .clip(RoundedCornerShape(27.dp))
                             .background(CardBackgroundDark)
-                            .padding(horizontal = 8.dp),
+                            .padding(horizontal = 14.dp),
                         horizontalArrangement = Arrangement.SpaceEvenly,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        for (i in 0..5) {
+                        for (i in 0..2) {
                             val pkg = allowedPackages.getOrNull(i)
                             if (!pkg.isNullOrBlank()) {
                                 AllowedAppCircle(
                                     packageName = pkg,
                                     onClick = {
-                                        val intent = context.packageManager.getLaunchIntentForPackage(pkg)
-                                        if (intent != null) {
-                                            context.startActivity(intent)
+                                        if (!isAmbientMode) {
+                                            val intent = context.packageManager.getLaunchIntentForPackage(pkg)
+                                            if (intent != null) {
+                                                context.startActivity(intent)
+                                            }
                                         }
                                     }
                                 )
@@ -490,17 +634,19 @@ fun LockScreenContent(
                         }
                     }
 
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(10.dp))
 
                     // White Emergency Phone Button
                     Box(
                         modifier = Modifier
-                            .size(52.dp)
+                            .size(54.dp)
                             .clip(CircleShape)
                             .background(Color.White)
                             .clickable {
-                                val dialIntent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:"))
-                                context.startActivity(dialIntent)
+                                if (!isAmbientMode) {
+                                    val dialIntent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:"))
+                                    context.startActivity(dialIntent)
+                                }
                             },
                         contentAlignment = Alignment.Center
                     ) {
@@ -512,7 +658,7 @@ fun LockScreenContent(
                         )
                     }
                 }
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(14.dp))
             }
         }
 
@@ -584,7 +730,7 @@ fun LockScreenContent(
                 },
                 text = {
                     Text(
-                        text = "You currently have 0 parachutes. You receive 1 free parachute every week, or you can request extra ones with a 5-hour cooldown in the Bags tab.",
+                        text = "You don't have any parachutes available right now. Wait for your weekly free parachute or request one on the Bags screen.",
                         fontFamily = GoogleSans,
                         color = CardMutedText
                     )
@@ -622,28 +768,28 @@ fun SlideToExitTrack(
     val animOffsetX = remember { androidx.compose.animation.core.Animatable(0f) }
     var hasTriggeredThresholdHaptic by remember { mutableStateOf(false) }
 
-    val containerHeight = 64.dp
-    val handleWidth = 62.dp
-    val handleHeight = 48.dp
-    val trackPadding = 8.dp
+    val containerHeight = 54.dp
+    val handleWidth = 64.dp
+    val handleHeight = 44.dp
+    val trackPadding = 5.dp
 
     BoxWithConstraints(
         modifier = Modifier
             .fillMaxWidth()
             .height(containerHeight)
-            .clip(RoundedCornerShape(32.dp))
+            .clip(RoundedCornerShape(27.dp))
             .background(CardBackgroundDark)
             .padding(trackPadding),
-        contentAlignment = Alignment.CenterStart
+        contentAlignment = Alignment.CenterEnd
     ) {
         val maxDragPx = with(density) {
             (maxWidth - handleWidth - trackPadding * 2).toPx().coerceAtLeast(1f)
         }
 
         val currentOffset = if (isDragging) dragOffsetX else animOffsetX.value
-        val progress = (currentOffset / maxDragPx).coerceIn(0f, 1f)
+        val progress = (-currentOffset / maxDragPx).coerceIn(0f, 1f)
 
-        // Background label (fades as handle slides over)
+        // Background label (centered in track)
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -654,72 +800,63 @@ fun SlideToExitTrack(
                 text = "SLIDE TO EXIT",
                 fontFamily = GoogleSans,
                 fontWeight = FontWeight.Bold,
-                fontSize = 12.sp,
+                fontSize = 11.sp,
                 color = CardMutedText,
                 letterSpacing = 2.sp
             )
         }
 
-        // Draggable parachute knob
+        // Draggable Handle on the right, slides leftwards to exit
         Box(
             modifier = Modifier
                 .offset { IntOffset(currentOffset.roundToInt(), 0) }
-                .width(handleWidth)
-                .height(handleHeight)
-                .clip(RoundedCornerShape(24.dp))
-                .background(CardAccentHandle)
+                .size(width = handleWidth, height = handleHeight)
+                .clip(RoundedCornerShape(22.dp))
+                .background(HandleBackground)
                 .pointerInput(Unit) {
                     detectHorizontalDragGestures(
                         onDragStart = {
                             isDragging = true
-                            dragOffsetX = animOffsetX.value
                             hasTriggeredThresholdHaptic = false
                         },
                         onDragEnd = {
                             isDragging = false
-                            scope.launch {
-                                if (dragOffsetX >= maxDragPx * 0.75f) {
-                                    view.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
+                            if (dragOffsetX <= -maxDragPx * 0.72f) {
+                                scope.launch {
                                     animOffsetX.snapTo(dragOffsetX)
-                                    animOffsetX.animateTo(maxDragPx, androidx.compose.animation.core.tween(120))
+                                    animOffsetX.animateTo(-maxDragPx, tween(120))
                                     onTriggerExitState()
                                     animOffsetX.snapTo(0f)
                                     dragOffsetX = 0f
-                                } else {
+                                }
+                            } else {
+                                scope.launch {
                                     animOffsetX.snapTo(dragOffsetX)
                                     animOffsetX.animateTo(
                                         targetValue = 0f,
-                                        animationSpec = androidx.compose.animation.core.spring(
-                                            dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
-                                            stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow
+                                        animationSpec = spring(
+                                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                                            stiffness = Spring.StiffnessMedium
                                         )
                                     )
                                     dragOffsetX = 0f
                                 }
-                                hasTriggeredThresholdHaptic = false
                             }
                         },
                         onDragCancel = {
                             isDragging = false
                             scope.launch {
                                 animOffsetX.snapTo(dragOffsetX)
-                                animOffsetX.animateTo(
-                                    targetValue = 0f,
-                                    animationSpec = androidx.compose.animation.core.spring(
-                                        dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
-                                        stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow
-                                    )
-                                )
+                                animOffsetX.animateTo(0f)
                                 dragOffsetX = 0f
-                                hasTriggeredThresholdHaptic = false
                             }
                         },
                         onHorizontalDrag = { change, dragAmount ->
                             change.consume()
-                            val next = (dragOffsetX + dragAmount).coerceIn(0f, maxDragPx)
+                            val next = (dragOffsetX + dragAmount).coerceIn(-maxDragPx, 0f)
                             dragOffsetX = next
 
-                            if (next >= maxDragPx * 0.75f) {
+                            if (next <= -maxDragPx * 0.72f) {
                                 if (!hasTriggeredThresholdHaptic) {
                                     view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
                                     hasTriggeredThresholdHaptic = true
@@ -735,7 +872,7 @@ fun SlideToExitTrack(
             Icon(
                 painter = painterResource(id = R.drawable.ic_parachute),
                 contentDescription = "Parachute Exit",
-                tint = Color.White,
+                tint = HandleIconColor,
                 modifier = Modifier
                     .size(20.dp)
                     .rotate(-25f)
@@ -766,7 +903,7 @@ fun AllowedAppCircle(
 
     Box(
         modifier = Modifier
-            .size(34.dp)
+            .size(36.dp)
             .clip(CircleShape)
             .background(CardAccentHandle)
             .clickable { onClick() },
@@ -802,20 +939,20 @@ fun AllowedAppCircle(
 
 @Composable
 fun EmptyAllowedSlotCircle() {
-    Canvas(modifier = Modifier.size(32.dp)) {
+    Canvas(modifier = Modifier.size(36.dp)) {
         val strokeWidth = 1.2.dp.toPx()
         val radius = (size.minDimension - strokeWidth) / 2
         val center = Offset(size.width / 2, size.height / 2)
 
         // Draw subtle dashed/dotted circle
-        val dotCount = 12
+        val dotCount = 14
         for (i in 0 until dotCount) {
             val angle = (i * 360f / dotCount) * (Math.PI / 180f).toFloat()
             val dx = center.x + radius * kotlin.math.cos(angle)
             val dy = center.y + radius * kotlin.math.sin(angle)
             drawCircle(
-                color = CardMutedText.copy(alpha = 0.6f),
-                radius = 1.dp.toPx(),
+                color = CardMutedText.copy(alpha = 0.5f),
+                radius = 1.1.dp.toPx(),
                 center = Offset(dx, dy)
             )
         }
@@ -836,4 +973,3 @@ fun EmptyAllowedSlotCircle() {
         )
     }
 }
-

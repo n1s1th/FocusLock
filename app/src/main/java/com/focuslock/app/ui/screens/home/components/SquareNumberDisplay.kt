@@ -24,7 +24,7 @@ private val DIGIT_MATRICES = mapOf(
         1, 1, 1
     ),
     1 to listOf(
-        0, 0, 1,
+        0, 1, 1,
         0, 0, 1,
         0, 0, 1,
         0, 0, 1,
