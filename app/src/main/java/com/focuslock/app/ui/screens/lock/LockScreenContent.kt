@@ -28,9 +28,11 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -49,7 +51,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -95,8 +96,6 @@ import kotlin.math.roundToInt
 private val CardBackgroundDark = Color(0xFF191817)
 private val CardMutedText = Color(0xFF8E8D8A)
 private val CardAccentHandle = Color(0xFF454341)
-private val HandleBackground = Color(0xFF6C6966)
-private val HandleIconColor = Color(0xFF2B2928)
 
 @Composable
 fun LockScreenContent(
@@ -266,308 +265,307 @@ fun LockScreenContent(
                     }
                 }
             }
-            .padding(horizontal = 16.dp, vertical = 20.dp)
+            .statusBarsPadding()
+            .navigationBarsPadding()
+            .padding(horizontal = 16.dp, vertical = 6.dp)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.SpaceBetween
+            verticalArrangement = Arrangement.Center
         ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
-                // 1. TOP LOGO (fades out in ambient screensaver mode)
-                BlockLogoView(
-                    modifier = Modifier.graphicsLayer { alpha = ambientAlpha },
-                    pixelSize = 4.8.dp,
-                    color = Color.White,
-                    pulseColor = AccentOrange
-                )
+            // 1. TOP LOGO
+            BlockLogoView(
+                modifier = Modifier.graphicsLayer { alpha = ambientAlpha },
+                pixelSize = 4.8.dp,
+                color = Color.White,
+                pulseColor = AccentOrange
+            )
 
-                Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(14.dp))
 
-                // 2. BIG DIGITAL TIMER CARD (HH:MM / MM:SS) - Floating in ambient mode
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(152.dp)
-                        .graphicsLayer {
-                            translationX = animFloatX
-                            translationY = animFloatY
-                        },
-                    shape = RoundedCornerShape(28.dp),
-                    colors = CardDefaults.cardColors(containerColor = timerCardBg),
-                    border = timerBorder,
-                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+            // 2. BIG DIGITAL TIMER CARD (HH:MM / MM:SS) - Sized generously
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(172.dp)
+                    .graphicsLayer {
+                        translationX = animFloatX
+                        translationY = animFloatY
+                    },
+                shape = RoundedCornerShape(28.dp),
+                colors = CardDefaults.cardColors(containerColor = timerCardBg),
+                border = timerBorder,
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+            ) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
+                    DigitalTimerDisplay(
+                        hours = displayHours,
+                        minutes = displayMinutes,
+                        blockSize = 18.dp,
+                        digitColor = timerDigitColor,
+                        colonColor = timerColonColor
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // 3. MIDDLE 2-COLUMN SECTION (Total height: 292dp)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                // LEFT COLUMN (Total height: 184 + 8 + 46 + 8 + 46 = 292.dp)
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    // Seconds Tile - Floating in ambient mode
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(184.dp)
+                            .graphicsLayer {
+                                translationX = animFloatX
+                                translationY = animFloatY
+                            },
+                        shape = RoundedCornerShape(26.dp),
+                        colors = CardDefaults.cardColors(containerColor = timerCardBg),
+                        border = timerBorder,
+                        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                     ) {
-                        DigitalTimerDisplay(
-                            hours = displayHours,
-                            minutes = displayMinutes,
-                            blockSize = 16.dp,
-                            digitColor = timerDigitColor,
-                            colonColor = timerColonColor
-                        )
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(vertical = 18.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                val s1 = displaySeconds / 10
+                                val s2 = displaySeconds % 10
+                                SquareDigit(digit = s1, blockSize = 16.dp, color = timerDigitColor)
+                                SquareDigit(digit = s2, blockSize = 16.dp, color = timerDigitColor)
+                            }
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Text(
+                                text = "SEC",
+                                fontFamily = GoogleSans,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp,
+                                color = if (isAmbientMode) Color(0xFF4A4744) else CardMutedText,
+                                letterSpacing = 2.sp
+                            )
+                        }
+                    }
+
+                    // Ends Time Pill
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(46.dp)
+                            .graphicsLayer { alpha = ambientAlpha },
+                        shape = RoundedCornerShape(23.dp),
+                        colors = CardDefaults.cardColors(containerColor = CardBackgroundDark),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(horizontal = 14.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Text(
+                                text = "ENDS",
+                                fontFamily = GoogleSans,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 10.sp,
+                                color = CardMutedText,
+                                letterSpacing = 1.sp
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = formattedEndTime,
+                                fontFamily = GoogleSans,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp,
+                                color = Color.White
+                            )
+                        }
+                    }
+
+                    // Parachutes Count Pill
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(46.dp)
+                            .graphicsLayer { alpha = ambientAlpha },
+                        shape = RoundedCornerShape(23.dp),
+                        colors = CardDefaults.cardColors(containerColor = CardBackgroundDark),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(horizontal = 14.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(24.dp)
+                                    .clip(CircleShape)
+                                    .background(CardAccentHandle),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.ic_parachute),
+                                    contentDescription = "Parachutes",
+                                    tint = Color.White,
+                                    modifier = Modifier
+                                        .size(13.dp)
+                                        .rotate(-25f)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Text(
+                                text = "$totalParachutes",
+                                fontFamily = GoogleSans,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 16.sp,
+                                color = Color.White
+                            )
+                        }
                     }
                 }
 
-                Spacer(modifier = Modifier.height(14.dp))
-
-                // 3. MIDDLE 2-COLUMN SECTION (Balanced & perfectly aligned)
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                // RIGHT COLUMN (Total height: 184 + 8 + 100 = 292.dp)
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .graphicsLayer { alpha = ambientAlpha },
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    // LEFT COLUMN (Total height: 176 + 8 + 46 + 8 + 46 = 284.dp)
-                    Column(
-                        modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        // Seconds Tile - Floating with the top timer in ambient mode
-                        Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(176.dp)
-                                .graphicsLayer {
-                                    translationX = animFloatX
-                                    translationY = animFloatY
-                                },
-                            shape = RoundedCornerShape(26.dp),
-                            colors = CardDefaults.cardColors(containerColor = timerCardBg),
-                            border = timerBorder,
-                            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-                        ) {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .padding(vertical = 18.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.Center
-                            ) {
-                                Row(
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    val s1 = displaySeconds / 10
-                                    val s2 = displaySeconds % 10
-                                    SquareDigit(digit = s1, blockSize = 15.dp, color = timerDigitColor)
-                                    SquareDigit(digit = s2, blockSize = 15.dp, color = timerDigitColor)
-                                }
-                                Spacer(modifier = Modifier.height(12.dp))
-                                Text(
-                                    text = "SEC",
-                                    fontFamily = GoogleSans,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 13.sp,
-                                    color = if (isAmbientMode) Color(0xFF4A4744) else CardMutedText,
-                                    letterSpacing = 2.sp
-                                )
-                            }
-                        }
-
-                        // Ends Time Pill (fades out in ambient mode)
-                        Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(46.dp)
-                                .graphicsLayer { alpha = ambientAlpha },
-                            shape = RoundedCornerShape(23.dp),
-                            colors = CardDefaults.cardColors(containerColor = CardBackgroundDark),
-                            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .padding(horizontal = 14.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.Center
-                            ) {
-                                Text(
-                                    text = "ENDS",
-                                    fontFamily = GoogleSans,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 10.sp,
-                                    color = CardMutedText,
-                                    letterSpacing = 1.sp
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = formattedEndTime,
-                                    fontFamily = GoogleSans,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 14.sp,
-                                    color = Color.White
-                                )
-                            }
-                        }
-
-                        // Parachutes Count Pill (fades out in ambient mode)
-                        Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(46.dp)
-                                .graphicsLayer { alpha = ambientAlpha },
-                            shape = RoundedCornerShape(23.dp),
-                            colors = CardDefaults.cardColors(containerColor = CardBackgroundDark),
-                            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .padding(horizontal = 14.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.Center
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(24.dp)
-                                        .clip(CircleShape)
-                                        .background(CardAccentHandle),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        painter = painterResource(id = R.drawable.ic_parachute),
-                                        contentDescription = "Parachutes",
-                                        tint = Color.White,
-                                        modifier = Modifier
-                                            .size(13.dp)
-                                            .rotate(-25f)
+                    // +15 min Extension Card
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(184.dp)
+                            .clip(RoundedCornerShape(26.dp))
+                            .clickable {
+                                if (!isAmbientMode) {
+                                    val currentEnd = app.preferences.getSessionEndTimeMillis()
+                                    val newEnd = currentEnd + (15 * 60 * 1000L)
+                                    val totalMin = app.preferences.getSessionTotalDurationMinutes() + 15
+                                    app.preferences.startSession(
+                                        endTimeMillis = newEnd,
+                                        durationMinutes = totalMin,
+                                        bagId = app.preferences.getActiveBagId(),
+                                        bagName = app.preferences.getActiveBagName()
                                     )
                                 }
-                                Spacer(modifier = Modifier.width(10.dp))
-                                Text(
-                                    text = "$totalParachutes",
-                                    fontFamily = GoogleSans,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 16.sp,
-                                    color = Color.White
-                                )
+                            },
+                        shape = RoundedCornerShape(26.dp),
+                        colors = CardDefaults.cardColors(containerColor = CardBackgroundDark),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(vertical = 18.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            Text(
+                                text = "+15",
+                                fontFamily = GoogleSans,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 38.sp,
+                                color = Color.White
+                            )
+                            Text(
+                                text = "min",
+                                fontFamily = GoogleSans,
+                                fontWeight = FontWeight.Medium,
+                                fontSize = 13.sp,
+                                color = CardMutedText
+                            )
+                            Spacer(modifier = Modifier.height(14.dp))
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(5.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                repeat(4) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(8.dp)
+                                            .background(CardAccentHandle)
+                                    )
+                                }
                             }
                         }
                     }
 
-                    // RIGHT COLUMN (Total height: 176 + 8 + 100 = 284.dp, fades out in ambient mode)
-                    Column(
+                    // Ambient Rain / Focus Sound Tile
+                    Card(
                         modifier = Modifier
-                            .weight(1f)
-                            .graphicsLayer { alpha = ambientAlpha },
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                            .fillMaxWidth()
+                            .height(100.dp),
+                        shape = RoundedCornerShape(26.dp),
+                        colors = CardDefaults.cardColors(containerColor = CardBackgroundDark),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                     ) {
-                        // +15 min Extension Card
-                        Card(
+                        Column(
                             modifier = Modifier
-                                .fillMaxWidth()
-                                .height(176.dp)
-                                .clip(RoundedCornerShape(26.dp))
-                                .clickable {
-                                    if (!isAmbientMode) {
-                                        // Add 15 minutes extension to active session
-                                        val currentEnd = app.preferences.getSessionEndTimeMillis()
-                                        val newEnd = currentEnd + (15 * 60 * 1000L)
-                                        val totalMin = app.preferences.getSessionTotalDurationMinutes() + 15
-                                        app.preferences.startSession(
-                                            endTimeMillis = newEnd,
-                                            durationMinutes = totalMin,
-                                            bagId = app.preferences.getActiveBagId(),
-                                            bagName = app.preferences.getActiveBagName()
-                                        )
-                                    }
-                                },
-                            shape = RoundedCornerShape(26.dp),
-                            colors = CardDefaults.cardColors(containerColor = CardBackgroundDark),
-                            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+                                .fillMaxSize()
+                                .padding(vertical = 12.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
                         ) {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .padding(vertical = 18.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.Center
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text(
-                                    text = "+15",
-                                    fontFamily = GoogleSans,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 38.sp,
-                                    color = Color.White
-                                )
-                                Text(
-                                    text = "min",
-                                    fontFamily = GoogleSans,
-                                    fontWeight = FontWeight.Medium,
-                                    fontSize = 13.sp,
-                                    color = CardMutedText
-                                )
-                                Spacer(modifier = Modifier.height(14.dp))
-                                Row(
-                                    horizontalArrangement = Arrangement.spacedBy(5.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    repeat(4) {
-                                        Box(
-                                            modifier = Modifier
-                                                .size(8.dp)
-                                                .background(CardAccentHandle)
-                                        )
-                                    }
+                                repeat(4) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(4.dp)
+                                            .background(CardMutedText)
+                                    )
                                 }
                             }
-                        }
-
-                        // Ambient Rain / Focus Sound Tile
-                        Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(100.dp),
-                            shape = RoundedCornerShape(26.dp),
-                            colors = CardDefaults.cardColors(containerColor = CardBackgroundDark),
-                            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-                        ) {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .padding(vertical = 12.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.Center
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(
+                                text = "RAIN",
+                                fontFamily = GoogleSans,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 12.sp,
+                                color = CardMutedText,
+                                letterSpacing = 2.sp
+                            )
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Row(
-                                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    repeat(4) {
-                                        Box(
-                                            modifier = Modifier
-                                                .size(4.dp)
-                                                .background(CardMutedText)
-                                        )
-                                    }
-                                }
-                                Spacer(modifier = Modifier.height(6.dp))
-                                Text(
-                                    text = "RAIN",
-                                    fontFamily = GoogleSans,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 12.sp,
-                                    color = CardMutedText,
-                                    letterSpacing = 2.sp
-                                )
-                                Spacer(modifier = Modifier.height(6.dp))
-                                Row(
-                                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    repeat(4) {
-                                        Box(
-                                            modifier = Modifier
-                                                .size(4.dp)
-                                                .background(CardMutedText)
-                                        )
-                                    }
+                                repeat(4) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(4.dp)
+                                            .background(CardMutedText)
+                                    )
                                 }
                             }
                         }
@@ -577,89 +575,85 @@ fun LockScreenContent(
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            // 4. BOTTOM ACTION SECTION (Slide to Exit + Allowed Apps Dock)
-            Column(
+            // 4. SLIDE TO EXIT (Directly below parachute & rain cards, with only 14dp gap!)
+            SlideToExitTrack(
+                modifier = Modifier.graphicsLayer { alpha = ambientAlpha },
+                onTriggerExit = {
+                    if (totalParachutes > 0) {
+                        showEmergencyDialog = true
+                    } else {
+                        showNoParachuteDialog = true
+                    }
+                }
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // 5. BOTTOM ALLOWED APPS DOCK (All 6 slots) & EMERGENCY DIALER
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .graphicsLayer { alpha = ambientAlpha },
-                horizontalAlignment = Alignment.CenterHorizontally
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                // Emergency Exit Slider
-                SlideToExitTrack(
-                    onTriggerExit = {
-                        if (totalParachutes > 0) {
-                            showEmergencyDialog = true
-                        } else {
-                            showNoParachuteDialog = true
-                        }
-                    }
-                )
-
-                Spacer(modifier = Modifier.height(14.dp))
-
-                // Bottom Allowed Apps Dock (3 slots matching Screenshot 1) & Emergency Dialer
+                val allowedPackages = (bagEntity?.allowedPackages ?: emptyList()).filter { it.isNotBlank() }
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Center,
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(52.dp)
+                        .clip(RoundedCornerShape(26.dp))
+                        .background(CardBackgroundDark)
+                        .padding(horizontal = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    val allowedPackages = (bagEntity?.allowedPackages ?: emptyList()).filter { it.isNotBlank() }
-                    Row(
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(54.dp)
-                            .clip(RoundedCornerShape(27.dp))
-                            .background(CardBackgroundDark)
-                            .padding(horizontal = 14.dp),
-                        horizontalArrangement = Arrangement.SpaceEvenly,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        for (i in 0..2) {
-                            val pkg = allowedPackages.getOrNull(i)
-                            if (!pkg.isNullOrBlank()) {
-                                AllowedAppCircle(
-                                    packageName = pkg,
-                                    onClick = {
-                                        if (!isAmbientMode) {
-                                            val intent = context.packageManager.getLaunchIntentForPackage(pkg)
-                                            if (intent != null) {
-                                                context.startActivity(intent)
-                                            }
+                    for (i in 0..5) {
+                        val pkg = allowedPackages.getOrNull(i)
+                        if (!pkg.isNullOrBlank()) {
+                            AllowedAppCircle(
+                                packageName = pkg,
+                                onClick = {
+                                    if (!isAmbientMode) {
+                                        val intent = context.packageManager.getLaunchIntentForPackage(pkg)
+                                        if (intent != null) {
+                                            context.startActivity(intent)
                                         }
                                     }
-                                )
-                            } else {
-                                EmptyAllowedSlotCircle()
-                            }
+                                }
+                            )
+                        } else {
+                            EmptyAllowedSlotCircle()
                         }
                     }
-
-                    Spacer(modifier = Modifier.width(10.dp))
-
-                    // White Emergency Phone Button
-                    Box(
-                        modifier = Modifier
-                            .size(54.dp)
-                            .clip(CircleShape)
-                            .background(Color.White)
-                            .clickable {
-                                if (!isAmbientMode) {
-                                    val dialIntent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:"))
-                                    context.startActivity(dialIntent)
-                                }
-                            },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_phone),
-                            contentDescription = "Emergency Phone",
-                            tint = Color.Black,
-                            modifier = Modifier.size(22.dp)
-                        )
-                    }
                 }
-                Spacer(modifier = Modifier.height(14.dp))
+
+                Spacer(modifier = Modifier.width(8.dp))
+
+                // White Emergency Phone Button
+                Box(
+                    modifier = Modifier
+                        .size(52.dp)
+                        .clip(CircleShape)
+                        .background(Color.White)
+                        .clickable {
+                            if (!isAmbientMode) {
+                                val dialIntent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:"))
+                                context.startActivity(dialIntent)
+                            }
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_phone),
+                        contentDescription = "Emergency Phone",
+                        tint = Color.Black,
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
             }
+
+            Spacer(modifier = Modifier.height(14.dp))
         }
 
         // Parachute Emergency Confirmation Dialog
@@ -754,8 +748,10 @@ fun LockScreenContent(
     }
 }
 
+// Previous version SlideToExitTrack: Handle on left, slides left-to-right
 @Composable
 fun SlideToExitTrack(
+    modifier: Modifier = Modifier,
     onTriggerExit: () -> Unit
 ) {
     val view = LocalView.current
@@ -768,28 +764,28 @@ fun SlideToExitTrack(
     val animOffsetX = remember { androidx.compose.animation.core.Animatable(0f) }
     var hasTriggeredThresholdHaptic by remember { mutableStateOf(false) }
 
-    val containerHeight = 54.dp
-    val handleWidth = 64.dp
-    val handleHeight = 44.dp
-    val trackPadding = 5.dp
+    val containerHeight = 64.dp
+    val handleWidth = 62.dp
+    val handleHeight = 48.dp
+    val trackPadding = 8.dp
 
     BoxWithConstraints(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .height(containerHeight)
-            .clip(RoundedCornerShape(27.dp))
+            .clip(RoundedCornerShape(32.dp))
             .background(CardBackgroundDark)
             .padding(trackPadding),
-        contentAlignment = Alignment.CenterEnd
+        contentAlignment = Alignment.CenterStart
     ) {
         val maxDragPx = with(density) {
             (maxWidth - handleWidth - trackPadding * 2).toPx().coerceAtLeast(1f)
         }
 
         val currentOffset = if (isDragging) dragOffsetX else animOffsetX.value
-        val progress = (-currentOffset / maxDragPx).coerceIn(0f, 1f)
+        val progress = (currentOffset / maxDragPx).coerceIn(0f, 1f)
 
-        // Background label (centered in track)
+        // Background label (fades as handle slides over)
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -800,63 +796,72 @@ fun SlideToExitTrack(
                 text = "SLIDE TO EXIT",
                 fontFamily = GoogleSans,
                 fontWeight = FontWeight.Bold,
-                fontSize = 11.sp,
+                fontSize = 12.sp,
                 color = CardMutedText,
                 letterSpacing = 2.sp
             )
         }
 
-        // Draggable Handle on the right, slides leftwards to exit
+        // Draggable parachute knob on the left, sliding rightwards
         Box(
             modifier = Modifier
                 .offset { IntOffset(currentOffset.roundToInt(), 0) }
-                .size(width = handleWidth, height = handleHeight)
-                .clip(RoundedCornerShape(22.dp))
-                .background(HandleBackground)
+                .width(handleWidth)
+                .height(handleHeight)
+                .clip(RoundedCornerShape(24.dp))
+                .background(CardAccentHandle)
                 .pointerInput(Unit) {
                     detectHorizontalDragGestures(
                         onDragStart = {
                             isDragging = true
+                            dragOffsetX = animOffsetX.value
                             hasTriggeredThresholdHaptic = false
                         },
                         onDragEnd = {
                             isDragging = false
-                            if (dragOffsetX <= -maxDragPx * 0.72f) {
-                                scope.launch {
+                            scope.launch {
+                                if (dragOffsetX >= maxDragPx * 0.75f) {
+                                    view.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
                                     animOffsetX.snapTo(dragOffsetX)
-                                    animOffsetX.animateTo(-maxDragPx, tween(120))
+                                    animOffsetX.animateTo(maxDragPx, tween(120))
                                     onTriggerExitState()
                                     animOffsetX.snapTo(0f)
                                     dragOffsetX = 0f
-                                }
-                            } else {
-                                scope.launch {
+                                } else {
                                     animOffsetX.snapTo(dragOffsetX)
                                     animOffsetX.animateTo(
                                         targetValue = 0f,
                                         animationSpec = spring(
                                             dampingRatio = Spring.DampingRatioMediumBouncy,
-                                            stiffness = Spring.StiffnessMedium
+                                            stiffness = Spring.StiffnessMediumLow
                                         )
                                     )
                                     dragOffsetX = 0f
                                 }
+                                hasTriggeredThresholdHaptic = false
                             }
                         },
                         onDragCancel = {
                             isDragging = false
                             scope.launch {
                                 animOffsetX.snapTo(dragOffsetX)
-                                animOffsetX.animateTo(0f)
+                                animOffsetX.animateTo(
+                                    targetValue = 0f,
+                                    animationSpec = spring(
+                                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                                        stiffness = Spring.StiffnessMediumLow
+                                    )
+                                )
                                 dragOffsetX = 0f
+                                hasTriggeredThresholdHaptic = false
                             }
                         },
                         onHorizontalDrag = { change, dragAmount ->
                             change.consume()
-                            val next = (dragOffsetX + dragAmount).coerceIn(-maxDragPx, 0f)
+                            val next = (dragOffsetX + dragAmount).coerceIn(0f, maxDragPx)
                             dragOffsetX = next
 
-                            if (next <= -maxDragPx * 0.72f) {
+                            if (next >= maxDragPx * 0.75f) {
                                 if (!hasTriggeredThresholdHaptic) {
                                     view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
                                     hasTriggeredThresholdHaptic = true
@@ -872,7 +877,7 @@ fun SlideToExitTrack(
             Icon(
                 painter = painterResource(id = R.drawable.ic_parachute),
                 contentDescription = "Parachute Exit",
-                tint = HandleIconColor,
+                tint = Color.White,
                 modifier = Modifier
                     .size(20.dp)
                     .rotate(-25f)
@@ -881,6 +886,7 @@ fun SlideToExitTrack(
     }
 }
 
+// Previous version AllowedAppCircle: size 34dp
 @Composable
 fun AllowedAppCircle(
     packageName: String,
@@ -903,7 +909,7 @@ fun AllowedAppCircle(
 
     Box(
         modifier = Modifier
-            .size(36.dp)
+            .size(34.dp)
             .clip(CircleShape)
             .background(CardAccentHandle)
             .clickable { onClick() },
@@ -937,22 +943,23 @@ fun AllowedAppCircle(
     }
 }
 
+// Previous version EmptyAllowedSlotCircle: size 32dp
 @Composable
 fun EmptyAllowedSlotCircle() {
-    Canvas(modifier = Modifier.size(36.dp)) {
+    Canvas(modifier = Modifier.size(32.dp)) {
         val strokeWidth = 1.2.dp.toPx()
         val radius = (size.minDimension - strokeWidth) / 2
         val center = Offset(size.width / 2, size.height / 2)
 
         // Draw subtle dashed/dotted circle
-        val dotCount = 14
+        val dotCount = 12
         for (i in 0 until dotCount) {
             val angle = (i * 360f / dotCount) * (Math.PI / 180f).toFloat()
             val dx = center.x + radius * kotlin.math.cos(angle)
             val dy = center.y + radius * kotlin.math.sin(angle)
             drawCircle(
-                color = CardMutedText.copy(alpha = 0.5f),
-                radius = 1.1.dp.toPx(),
+                color = CardMutedText.copy(alpha = 0.6f),
+                radius = 1.dp.toPx(),
                 center = Offset(dx, dy)
             )
         }
