@@ -77,13 +77,17 @@ fun RoutinesScreen(
     val routines by viewModel.routines.collectAsState()
     var selectedRoutineIndex by remember { mutableIntStateOf(0) }
 
-    // Fallback routines if database is loading
-    val routine1 = routines.getOrNull(0) ?: RoutineEntity(id = 1, name = "Routine 1", targetBagId = 1L, startHour = 0, startMinute = 0, durationMinutes = 60, activeDaysMask = 127, isEnabled = false)
-    val routine2 = routines.getOrNull(1) ?: RoutineEntity(id = 2, name = "Routine 2", targetBagId = 1L, startHour = 0, startMinute = 0, durationMinutes = 60, activeDaysMask = 127, isEnabled = false)
-    val routine3 = routines.getOrNull(2) ?: RoutineEntity(id = 3, name = "Routine 3", targetBagId = 1L, startHour = 0, startMinute = 0, durationMinutes = 60, activeDaysMask = 127, isEnabled = false)
+    // Fix 6: Only use real DB entities — never mix fallback IDs with live data.
+    // If loading, show zero-state defaults (id=-1 so no ViewModel write will match a real row).
+    val emptyRoutine = RoutineEntity(id = -1L, name = "Loading", targetBagId = 1L, startHour = 9, startMinute = 0, durationMinutes = 60, activeDaysMask = 62, isEnabled = false)
+    val routine1 = routines.getOrNull(0) ?: emptyRoutine.copy(name = "Routine 1")
+    val routine2 = routines.getOrNull(1) ?: emptyRoutine.copy(name = "Routine 2")
+    val routine3 = routines.getOrNull(2) ?: emptyRoutine.copy(name = "Routine 3")
     val routineList = listOf(routine1, routine2, routine3)
 
+    // Use the currently selected real routine (or first if index out of range)
     val currentRoutine = routineList.getOrElse(selectedRoutineIndex) { routine1 }
+    val isDataLoaded = routines.isNotEmpty()
 
     val startHour = currentRoutine.startHour
     val startMinute = currentRoutine.startMinute
@@ -236,7 +240,10 @@ fun RoutinesScreen(
             VerticalOnOffSwitch(
                 isEnabled = isEnabled,
                 onToggle = { newEnabled ->
-                    viewModel.setRoutineEnabled(currentRoutine, newEnabled)
+                    // Fix 6: Only update real entities
+                    if (isDataLoaded) {
+                        viewModel.setRoutineEnabled(currentRoutine, newEnabled)
+                    }
                 },
                 modifier = Modifier.width(62.dp)
             )
@@ -270,12 +277,15 @@ fun RoutinesScreen(
                             label = label,
                             isActive = isDayActive,
                             onStateChanged = { makeActive ->
-                                val newMask = if (makeActive) {
-                                    daysMask or (1 shl dayIndex)
-                                } else {
-                                    daysMask and (1 shl dayIndex).inv()
+                                // Fix 6: Only update when real DB data is loaded
+                                if (isDataLoaded) {
+                                    val newMask = if (makeActive) {
+                                        daysMask or (1 shl dayIndex)
+                                    } else {
+                                        daysMask and (1 shl dayIndex).inv()
+                                    }
+                                    viewModel.updateRoutineDays(currentRoutine, newMask)
                                 }
-                                viewModel.updateRoutineDays(currentRoutine, newMask)
                             }
                         )
                     }
@@ -322,26 +332,30 @@ fun RoutinesScreen(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    // START RULER
+                    // START RULER — only respond when real data is loaded
                     RoutineScrollableRuler(
                         label = "START",
                         totalMinutes = startHour * 60 + startMinute,
                         onMinutesChanged = { newStartMinutes ->
-                            val sH = newStartMinutes / 60
-                            val sM = newStartMinutes % 60
-                            viewModel.updateRoutineTimes(currentRoutine, sH, sM, endHour, endMinute)
+                            if (isDataLoaded) {
+                                val sH = newStartMinutes / 60
+                                val sM = newStartMinutes % 60
+                                viewModel.updateRoutineTimes(currentRoutine, sH, sM, endHour, endMinute)
+                            }
                         },
                         modifier = Modifier.weight(1f)
                     )
 
-                    // END RULER
+                    // END RULER — only respond when real data is loaded
                     RoutineScrollableRuler(
                         label = "END",
                         totalMinutes = endTotalMinutes,
                         onMinutesChanged = { newEndMinutes ->
-                            val eH = newEndMinutes / 60
-                            val eM = newEndMinutes % 60
-                            viewModel.updateRoutineTimes(currentRoutine, startHour, startMinute, eH, eM)
+                            if (isDataLoaded) {
+                                val eH = newEndMinutes / 60
+                                val eM = newEndMinutes % 60
+                                viewModel.updateRoutineTimes(currentRoutine, startHour, startMinute, eH, eM)
+                            }
                         },
                         modifier = Modifier.weight(1f)
                     )

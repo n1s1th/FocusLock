@@ -33,5 +33,5 @@ interface BagDao {
     suspend fun deleteBag(bag: BagEntity)
 
     @Query("UPDATE bags SET isDefault = 0 WHERE id != :defaultBagId")
-    suspend fun clearOtherDefaults(defaultBagId: Long)
+    suspend fun clearOtherDefaults(defaultBagId: Long): Int
 }

@@ -31,12 +31,12 @@ import androidx.compose.material.icons.filled.Vibration
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -51,14 +51,18 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.focuslock.app.FocusLockApp
-import com.focuslock.app.ui.theme.BackgroundDark
-import com.focuslock.app.ui.theme.PrimaryIndigo
-import com.focuslock.app.ui.theme.SecondaryEmerald
-import com.focuslock.app.ui.theme.SurfaceCard
-import com.focuslock.app.ui.theme.TextMuted
-import com.focuslock.app.ui.theme.TextPrimary
-import com.focuslock.app.ui.theme.TextSecondary
+import com.focuslock.app.ui.screens.home.components.TopHeaderBar
+import com.focuslock.app.ui.theme.AccentOrange
+import com.focuslock.app.ui.theme.CharcoalPrimary
+import com.focuslock.app.ui.theme.GoogleSans
+import com.focuslock.app.ui.theme.OutlineSubtle
+import com.focuslock.app.ui.theme.ScreenBackground
+import com.focuslock.app.ui.theme.SecondaryGray
+import com.focuslock.app.ui.theme.SecondaryMuted
+import com.focuslock.app.ui.theme.SurfaceBright
+import com.focuslock.app.ui.theme.SurfaceVariant
 
+// Fix 10: Settings screen now uses app theme (light, clean) + TopHeaderBar for consistency
 @Composable
 fun SettingsScreen() {
     val context = LocalContext.current
@@ -68,28 +72,43 @@ fun SettingsScreen() {
     var blockShade by remember { mutableStateOf(app.preferences.isBlockShadeEnabled()) }
     var hapticsEnabled by remember { mutableStateOf(app.preferences.isHapticsEnabled()) }
 
+    val parachuteCount by app.preferences.parachutesStateFlow.collectAsState()
+
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(BackgroundDark)
-            .padding(20.dp)
+            .background(ScreenBackground)
+            .padding(horizontal = 16.dp)
             .verticalScroll(rememberScrollState())
     ) {
-        Spacer(modifier = Modifier.height(16.dp))
-        Text(
-            text = "Settings & Protection",
-            style = MaterialTheme.typography.headlineMedium,
-            color = TextPrimary
-        )
-        Text(
-            text = "Fine-tune blocking strictness and system permissions",
-            style = MaterialTheme.typography.bodyMedium,
-            color = TextMuted
+        Spacer(modifier = Modifier.height(14.dp))
+
+        // Fix 10: Add consistent TopHeaderBar like other screens
+        TopHeaderBar(
+            streakCount = app.preferences.getCurrentStreak(),
+            parachuteCount = parachuteCount,
+            onProfileClick = {}
         )
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        Text(text = "STRICT FOCUS CONTROLS", style = MaterialTheme.typography.labelLarge, color = TextMuted)
+        Text(
+            text = "Settings & Protection",
+            fontFamily = GoogleSans,
+            fontWeight = FontWeight.Bold,
+            fontSize = 22.sp,
+            color = CharcoalPrimary
+        )
+        Text(
+            text = "Fine-tune blocking strictness and system permissions",
+            fontFamily = GoogleSans,
+            fontSize = 13.sp,
+            color = SecondaryGray
+        )
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        SectionLabel("STRICT FOCUS CONTROLS")
         Spacer(modifier = Modifier.height(10.dp))
 
         SettingToggleCard(
@@ -131,7 +150,7 @@ fun SettingsScreen() {
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        Text(text = "SYSTEM PERMISSIONS & PERSISTENCE", style = MaterialTheme.typography.labelLarge, color = TextMuted)
+        SectionLabel("SYSTEM PERMISSIONS & PERSISTENCE")
         Spacer(modifier = Modifier.height(10.dp))
 
         SettingActionCard(
@@ -165,25 +184,27 @@ fun SettingsScreen() {
             }
         )
 
-        Spacer(modifier = Modifier.height(36.dp))
+        Spacer(modifier = Modifier.height(28.dp))
 
-        // Open Source License / Free badge
+        // Open Source / Free badge
         Card(
-            colors = CardDefaults.cardColors(containerColor = SurfaceCard),
-            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = SurfaceBright),
+            shape = RoundedCornerShape(20.dp),
             modifier = Modifier.fillMaxWidth()
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(
                     text = "BlockIT • Stop Phone Addiction",
-                    color = PrimaryIndigo,
+                    fontFamily = GoogleSans,
+                    color = CharcoalPrimary,
                     fontWeight = FontWeight.Bold,
                     fontSize = 15.sp
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "No in-app purchases, no advertisements, no tracking. All features (unlimited sessions, multi-bag whitelist, auto-routines) are unlocked permanently.",
-                    color = TextSecondary,
+                    text = "No in-app purchases, no advertisements, no tracking. All features — unlimited sessions, multi-bag whitelist, auto-routines, parachute system — are permanently free.",
+                    fontFamily = GoogleSans,
+                    color = SecondaryGray,
                     fontSize = 13.sp
                 )
             }
@@ -191,6 +212,18 @@ fun SettingsScreen() {
 
         Spacer(modifier = Modifier.height(24.dp))
     }
+}
+
+@Composable
+private fun SectionLabel(text: String) {
+    Text(
+        text = text,
+        fontFamily = GoogleSans,
+        fontWeight = FontWeight.Bold,
+        fontSize = 11.sp,
+        letterSpacing = 1.sp,
+        color = SecondaryMuted
+    )
 }
 
 @Composable
@@ -202,8 +235,8 @@ fun SettingToggleCard(
     onCheckedChange: (Boolean) -> Unit
 ) {
     Card(
-        colors = CardDefaults.cardColors(containerColor = SurfaceCard),
-        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = SurfaceBright),
+        shape = RoundedCornerShape(20.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(
@@ -221,22 +254,27 @@ fun SettingToggleCard(
                     modifier = Modifier
                         .size(40.dp)
                         .clip(CircleShape)
-                        .background(PrimaryIndigo.copy(alpha = 0.2f)),
+                        .background(CharcoalPrimary.copy(alpha = 0.1f)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(imageVector = icon, contentDescription = null, tint = PrimaryIndigo, modifier = Modifier.size(20.dp))
+                    Icon(imageVector = icon, contentDescription = null, tint = CharcoalPrimary, modifier = Modifier.size(20.dp))
                 }
                 Spacer(modifier = Modifier.width(12.dp))
                 Column {
-                    Text(text = title, color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                    Text(text = subtitle, color = TextMuted, fontSize = 12.sp)
+                    Text(text = title, fontFamily = GoogleSans, color = CharcoalPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                    Text(text = subtitle, fontFamily = GoogleSans, color = SecondaryGray, fontSize = 11.sp)
                 }
             }
             Spacer(modifier = Modifier.width(8.dp))
             Switch(
                 checked = isChecked,
                 onCheckedChange = onCheckedChange,
-                colors = SwitchDefaults.colors(checkedThumbColor = PrimaryIndigo)
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = SurfaceBright,
+                    checkedTrackColor = CharcoalPrimary,
+                    uncheckedThumbColor = SecondaryGray,
+                    uncheckedTrackColor = SurfaceVariant
+                )
             )
         }
     }
@@ -251,8 +289,8 @@ fun SettingActionCard(
     onClick: () -> Unit
 ) {
     Card(
-        colors = CardDefaults.cardColors(containerColor = SurfaceCard),
-        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = SurfaceBright),
+        shape = RoundedCornerShape(20.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(
@@ -270,19 +308,25 @@ fun SettingActionCard(
                     modifier = Modifier
                         .size(40.dp)
                         .clip(CircleShape)
-                        .background(SecondaryEmerald.copy(alpha = 0.2f)),
+                        .background(AccentOrange.copy(alpha = 0.12f)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(imageVector = icon, contentDescription = null, tint = SecondaryEmerald, modifier = Modifier.size(20.dp))
+                    Icon(imageVector = icon, contentDescription = null, tint = AccentOrange, modifier = Modifier.size(20.dp))
                 }
                 Spacer(modifier = Modifier.width(12.dp))
                 Column {
-                    Text(text = title, color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                    Text(text = subtitle, color = TextMuted, fontSize = 12.sp)
+                    Text(text = title, fontFamily = GoogleSans, color = CharcoalPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                    Text(text = subtitle, fontFamily = GoogleSans, color = SecondaryGray, fontSize = 11.sp)
                 }
             }
             TextButton(onClick = onClick) {
-                Text(text = actionLabel, color = SecondaryEmerald, fontWeight = FontWeight.Bold)
+                Text(
+                    text = actionLabel,
+                    fontFamily = GoogleSans,
+                    color = AccentOrange,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 13.sp
+                )
             }
         }
     }

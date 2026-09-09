@@ -30,5 +30,5 @@ interface RoutineDao {
     suspend fun deleteRoutine(routine: RoutineEntity)
 
     @Query("UPDATE routines SET isEnabled = :isEnabled WHERE id = :id")
-    suspend fun toggleRoutine(id: Long, isEnabled: Boolean)
+    suspend fun toggleRoutine(id: Long, isEnabled: Boolean): Int
 }

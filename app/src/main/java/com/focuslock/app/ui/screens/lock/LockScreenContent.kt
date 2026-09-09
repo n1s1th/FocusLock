@@ -11,6 +11,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.layout.Arrangement
@@ -49,6 +50,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -58,6 +60,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
@@ -76,6 +79,7 @@ import com.focuslock.app.ui.screens.home.components.SquareDigit
 import com.focuslock.app.ui.theme.AccentOrange
 import com.focuslock.app.ui.theme.GoogleSans
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -452,18 +456,19 @@ fun LockScreenContent(
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Allowed Apps Pill
+                    // Fix 8: Show all 6 allowed app slots
                     val allowedPackages = (bagEntity?.allowedPackages ?: emptyList()).filter { it.isNotBlank() }
                     Row(
                         modifier = Modifier
+                            .weight(1f)
                             .height(56.dp)
                             .clip(RoundedCornerShape(28.dp))
                             .background(CardBackgroundDark)
-                            .padding(horizontal = 14.dp),
-                        horizontalArrangement = Arrangement.spacedBy(14.dp),
+                            .padding(horizontal = 10.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        for (i in 0..2) {
+                        for (i in 0..5) {
                             val pkg = allowedPackages.getOrNull(i)
                             if (!pkg.isNullOrBlank()) {
                                 AllowedAppCircle(
@@ -481,7 +486,7 @@ fun LockScreenContent(
                         }
                     }
 
-                    Spacer(modifier = Modifier.width(14.dp))
+                    Spacer(modifier = Modifier.width(10.dp))
 
                     // White Emergency Phone Button
                     Box(
@@ -603,23 +608,34 @@ fun LockScreenContent(
 fun SlideToExitTrack(
     onTriggerExit: () -> Unit
 ) {
-    Card(
+    // Fix 7: Real horizontal drag gesture — must slide 75% across to trigger exit
+    val scope = rememberCoroutineScope()
+    val offsetX = remember { androidx.compose.animation.core.Animatable(0f) }
+    val density = LocalDensity.current
+
+    val containerHeight = 64.dp
+    val handleWidth = 62.dp
+    val handleHeight = 48.dp
+    val trackPadding = 8.dp
+
+    BoxWithConstraints(
         modifier = Modifier
             .fillMaxWidth()
-            .height(64.dp)
+            .height(containerHeight)
             .clip(RoundedCornerShape(32.dp))
-            .clickable { onTriggerExit() },
-        shape = RoundedCornerShape(32.dp),
-        colors = CardDefaults.cardColors(containerColor = CardBackgroundDark),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+            .background(CardBackgroundDark)
+            .padding(trackPadding),
+        contentAlignment = Alignment.CenterStart
     ) {
+        val maxDragPx = with(density) {
+            (maxWidth - handleWidth - trackPadding * 2).toPx()
+        }
+
+        // Background label
         Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 8.dp),
+            modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center
         ) {
-            // Background label
             Text(
                 text = "SLIDE TO EXIT",
                 fontFamily = GoogleSans,
@@ -628,26 +644,47 @@ fun SlideToExitTrack(
                 color = CardMutedText,
                 letterSpacing = 2.sp
             )
+        }
 
-            // Right Knob with Parachute
-            Box(
+        // Draggable parachute knob
+        Box(
+            modifier = Modifier
+                .offset { IntOffset(offsetX.value.roundToInt(), 0) }
+                .width(handleWidth)
+                .height(handleHeight)
+                .clip(RoundedCornerShape(24.dp))
+                .background(CardAccentHandle)
+                .pointerInput(maxDragPx) {
+                    detectHorizontalDragGestures(
+                        onDragEnd = {
+                            scope.launch {
+                                if (offsetX.value >= maxDragPx * 0.75f) {
+                                    // Committed: slide fully right then trigger
+                                    offsetX.animateTo(maxDragPx, androidx.compose.animation.core.tween(120))
+                                    onTriggerExit()
+                                }
+                                // Snap back to start
+                                offsetX.animateTo(0f, androidx.compose.animation.core.tween(280))
+                            }
+                        },
+                        onHorizontalDrag = { _, dragAmount ->
+                            scope.launch {
+                                val next = (offsetX.value + dragAmount).coerceIn(0f, maxDragPx)
+                                offsetX.snapTo(next)
+                            }
+                        }
+                    )
+                },
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                painter = painterResource(id = R.drawable.ic_parachute),
+                contentDescription = "Parachute Exit",
+                tint = Color.White,
                 modifier = Modifier
-                    .align(Alignment.CenterEnd)
-                    .width(62.dp)
-                    .height(48.dp)
-                    .clip(RoundedCornerShape(24.dp))
-                    .background(CardAccentHandle),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    painter = painterResource(id = R.drawable.ic_parachute),
-                    contentDescription = "Parachute Exit",
-                    tint = Color.White,
-                    modifier = Modifier
-                        .size(20.dp)
-                        .rotate(-25f)
-                )
-            }
+                    .size(20.dp)
+                    .rotate(-25f)
+            )
         }
     }
 }

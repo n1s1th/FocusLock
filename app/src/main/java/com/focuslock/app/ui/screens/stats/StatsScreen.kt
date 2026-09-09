@@ -58,6 +58,7 @@ import com.focuslock.app.ui.theme.ScreenBackground
 import com.focuslock.app.ui.theme.SecondaryGray
 import com.focuslock.app.ui.theme.SurfaceBright
 import com.focuslock.app.ui.theme.SurfaceVariant
+import java.util.Calendar
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.sin
@@ -68,8 +69,24 @@ fun StatsScreen(
     viewModel: StatsViewModel = viewModel()
 ) {
     var selectedPeriodMode by remember { mutableIntStateOf(1) } // 0: Day, 1: Month, 2: Year
-    var selectedMonthYear by remember { mutableStateOf("SEPTEMBER 2026") }
     var rotaryAngle by remember { mutableFloatStateOf(210f) }
+
+    // Fix 5: Real data from StateFlows
+    val recentSessions by viewModel.recentSessions.collectAsState()
+    val parachuteCount by viewModel.parachutesCount.collectAsState()
+    val todayMinutes by viewModel.todayMinutes.collectAsState()
+    val totalLifetimeMinutes by viewModel.totalLifetimeMinutes.collectAsState()
+    val totalCompletedSessions by viewModel.totalCompletedSessions.collectAsState()
+
+    // Fix 5: Date navigation state — Calendar-based, starts at current month
+    var displayedCalendar by remember { mutableStateOf(Calendar.getInstance()) }
+    val monthYearLabel = viewModel.formatMonthYear(displayedCalendar)
+
+    // Fix 5: Real day label from today's session data
+    val dayLabel = viewModel.formatDayLabel(recentSessions)
+
+    // Fix 5: Real bar chart data from last 7 days
+    val weeklyBars = viewModel.getWeeklyBarData(recentSessions)
 
     Column(
         modifier = Modifier
@@ -81,16 +98,16 @@ fun StatsScreen(
     ) {
         Spacer(modifier = Modifier.height(14.dp))
 
-        // 1. TOP HEADER
+        // 1. TOP HEADER — Fix 5: live streak + parachute count
         TopHeaderBar(
-            streakCount = 10,
-            parachuteCount = 0,
+            streakCount = viewModel.getStreak(),
+            parachuteCount = parachuteCount,
             onProfileClick = onNavigateToSettings
         )
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // 2. TOP WHITE CARD (Minimalist Bar Chart + Dotted Timeline)
+        // 2. TOP WHITE CARD — Fix 5: real bar chart from weekly session data
         Card(
             modifier = Modifier
                 .fillMaxWidth()
@@ -110,28 +127,25 @@ fun StatsScreen(
                     val barWidth = 6.dp.toPx()
                     val barGap = 4.dp.toPx()
 
-                    // Vertical bars on the left
-                    val barHeights = listOf(0.85f, 0.50f, 0.72f)
-                    barHeights.forEachIndexed { i, fraction ->
-                        val h = (size.height * 0.75f) * fraction
+                    // Fix 5: Real bar heights from last 7 days of sessions
+                    weeklyBars.forEachIndexed { i, fraction ->
+                        val h = (size.height * 0.75f) * fraction.coerceAtLeast(0.04f)
                         val x = i * (barWidth + barGap) + 4.dp.toPx()
                         drawRoundRect(
-                            color = CharcoalPrimary,
+                            color = if (i == weeklyBars.lastIndex) AccentOrange else CharcoalPrimary,
                             topLeft = Offset(x, bottomY - h),
                             size = Size(barWidth, h),
                             cornerRadius = CornerRadius(2.dp.toPx(), 2.dp.toPx())
                         )
                     }
 
-                    // Dotted Baseline
-                    val startX = 3 * (barWidth + barGap) + 8.dp.toPx()
+                    // Dotted Baseline timeline
+                    val startX = weeklyBars.size * (barWidth + barGap) + 8.dp.toPx()
                     val dotCount = 24
                     val dotSize = 4.dp.toPx()
-                    val dotSpacing = (size.width - startX) / dotCount
-
+                    val dotSpacing = (size.width - startX) / dotCount.toFloat()
                     for (d in 0 until dotCount) {
-                        val isFirstDot = (d == 0)
-                        val color = if (isFirstDot) AccentOrange else Color(0xFFD0D0D0)
+                        val color = if (d == 0) AccentOrange else Color(0xFFD0D0D0)
                         drawRect(
                             color = color,
                             topLeft = Offset(startX + (d * dotSpacing), bottomY - dotSize),
@@ -144,9 +158,9 @@ fun StatsScreen(
 
         Spacer(modifier = Modifier.height(14.dp))
 
-        // Subtitle: FRIDAY 4 · 0 MIN
+        // Fix 5: Real day label from today's actual session data
         Text(
-            text = "FRIDAY 4  ·  0 MIN",
+            text = dayLabel,
             fontFamily = GoogleSans,
             fontWeight = FontWeight.Bold,
             fontSize = 11.sp,
@@ -156,7 +170,7 @@ fun StatsScreen(
 
         Spacer(modifier = Modifier.height(14.dp))
 
-        // 3. DATE SELECTOR CARD
+        // 3. DATE SELECTOR CARD — Fix 5: working prev/next navigation
         Card(
             modifier = Modifier
                 .fillMaxWidth()
@@ -173,7 +187,16 @@ fun StatsScreen(
                 Box(
                     modifier = Modifier
                         .size(68.dp)
-                        .clickable { /* Prev */ },
+                        .clickable {
+                            // Fix 5: Navigate backward in time
+                            val prev = displayedCalendar.clone() as Calendar
+                            when (selectedPeriodMode) {
+                                0 -> prev.add(Calendar.DAY_OF_YEAR, -1)
+                                1 -> prev.add(Calendar.MONTH, -1)
+                                2 -> prev.add(Calendar.YEAR, -1)
+                            }
+                            displayedCalendar = prev
+                        },
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
@@ -184,7 +207,6 @@ fun StatsScreen(
                     )
                 }
 
-                // Vertical Divider
                 Box(
                     modifier = Modifier
                         .width(1.dp)
@@ -192,15 +214,15 @@ fun StatsScreen(
                         .background(OutlineSubtle)
                 )
 
-                // Month / Year Label
                 Box(
                     modifier = Modifier
                         .weight(1f)
                         .height(68.dp),
                     contentAlignment = Alignment.Center
                 ) {
+                    // Fix 5: Real calendar-driven label
                     Text(
-                        text = selectedMonthYear,
+                        text = monthYearLabel,
                         fontFamily = GoogleSans,
                         fontWeight = FontWeight.Bold,
                         fontSize = 13.sp,
@@ -209,7 +231,6 @@ fun StatsScreen(
                     )
                 }
 
-                // Vertical Divider
                 Box(
                     modifier = Modifier
                         .width(1.dp)
@@ -217,17 +238,36 @@ fun StatsScreen(
                         .background(OutlineSubtle)
                 )
 
-                // Next Button
+                // Next Button (disabled if at current month/year)
+                val isAtPresent = run {
+                    val now = Calendar.getInstance()
+                    when (selectedPeriodMode) {
+                        0 -> displayedCalendar.get(Calendar.DAY_OF_YEAR) == now.get(Calendar.DAY_OF_YEAR) &&
+                                displayedCalendar.get(Calendar.YEAR) == now.get(Calendar.YEAR)
+                        1 -> displayedCalendar.get(Calendar.MONTH) == now.get(Calendar.MONTH) &&
+                                displayedCalendar.get(Calendar.YEAR) == now.get(Calendar.YEAR)
+                        else -> displayedCalendar.get(Calendar.YEAR) == now.get(Calendar.YEAR)
+                    }
+                }
                 Box(
                     modifier = Modifier
                         .size(68.dp)
-                        .clickable { /* Next */ },
+                        .clickable(enabled = !isAtPresent) {
+                            // Fix 5: Navigate forward in time
+                            val next = displayedCalendar.clone() as Calendar
+                            when (selectedPeriodMode) {
+                                0 -> next.add(Calendar.DAY_OF_YEAR, 1)
+                                1 -> next.add(Calendar.MONTH, 1)
+                                2 -> next.add(Calendar.YEAR, 1)
+                            }
+                            displayedCalendar = next
+                        },
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                         contentDescription = "Next",
-                        tint = SecondaryGray.copy(alpha = 0.4f),
+                        tint = SecondaryGray.copy(alpha = if (isAtPresent) 0.25f else 0.8f),
                         modifier = Modifier.size(28.dp)
                     )
                 }
@@ -236,14 +276,14 @@ fun StatsScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // 4. BOTTOM INTERACTIVE SECTION (Day/Month/Year + Rotary Wheel)
+        // 4. BOTTOM SECTION: Period mode + Rotary wheel + Stats summary
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(200.dp),
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            // Left Column: Day / Month / Year Mode Buttons
+            // Left Column: Day / Month / Year mode buttons
             Column(
                 modifier = Modifier
                     .width(96.dp)
@@ -258,7 +298,11 @@ fun StatsScreen(
                             .weight(1f)
                             .clip(RoundedCornerShape(18.dp))
                             .background(if (isSelected) CharcoalPrimary else SurfaceVariant)
-                            .clickable { selectedPeriodMode = index },
+                            .clickable {
+                                selectedPeriodMode = index
+                                // Reset calendar to today on mode change
+                                displayedCalendar = Calendar.getInstance()
+                            },
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
@@ -272,7 +316,7 @@ fun StatsScreen(
                 }
             }
 
-            // Right Column: Circular Rotary Wheel
+            // Right Column: Rotary Gauge + Stats overlay
             Card(
                 modifier = Modifier
                     .weight(1f)
@@ -290,11 +334,88 @@ fun StatsScreen(
                         onAngleChanged = { rotaryAngle = it },
                         modifier = Modifier.size(170.dp)
                     )
+                    // Fix 5: Show real total sessions count in the center of the gauge
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = "$totalCompletedSessions",
+                            fontFamily = GoogleSans,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 22.sp,
+                            color = CharcoalPrimary
+                        )
+                        Text(
+                            text = "sessions",
+                            fontFamily = GoogleSans,
+                            fontSize = 11.sp,
+                            color = SecondaryGray
+                        )
+                    }
                 }
             }
         }
 
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Fix 5: Real lifetime stats summary row
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            StatSummaryCard(
+                label = "Today",
+                value = "${todayMinutes ?: 0} min",
+                modifier = Modifier.weight(1f)
+            )
+            StatSummaryCard(
+                label = "All Time",
+                value = "${(totalLifetimeMinutes ?: 0) / 60}h ${(totalLifetimeMinutes ?: 0) % 60}m",
+                modifier = Modifier.weight(1f)
+            )
+            StatSummaryCard(
+                label = "Streak",
+                value = "${viewModel.getStreak()} days",
+                modifier = Modifier.weight(1f)
+            )
+        }
+
         Spacer(modifier = Modifier.height(20.dp))
+    }
+}
+
+@Composable
+private fun StatSummaryCard(
+    label: String,
+    value: String,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier.height(72.dp),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = SurfaceBright),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(12.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = value,
+                fontFamily = GoogleSans,
+                fontWeight = FontWeight.Bold,
+                fontSize = 14.sp,
+                color = CharcoalPrimary
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = label,
+                fontFamily = GoogleSans,
+                fontSize = 11.sp,
+                color = SecondaryGray
+            )
+        }
     }
 }
 
@@ -323,7 +444,7 @@ fun RotaryGaugeView(
         val outerRadius = size.minDimension / 2f - 10.dp.toPx()
         val innerCircleRadius = outerRadius * 0.72f
 
-        // Draw radial perimeter tick marks
+        // Radial tick marks
         val tickCount = 40
         for (i in 0 until tickCount) {
             val angle = (i * (360f / tickCount))
@@ -345,7 +466,7 @@ fun RotaryGaugeView(
             )
         }
 
-        // Draw inner circular track
+        // Inner circular track
         drawCircle(
             color = ScreenBackground,
             radius = innerCircleRadius,
@@ -358,7 +479,7 @@ fun RotaryGaugeView(
             style = Stroke(width = 1.dp.toPx())
         )
 
-        // Draw Orange Knob / Dot on inner track
+        // Orange knob / dot on inner track
         val knobDistance = innerCircleRadius * 0.58f
         val currentRad = Math.toRadians(angleDegrees.toDouble())
         val knobX = (center.x + knobDistance * cos(currentRad)).toFloat()

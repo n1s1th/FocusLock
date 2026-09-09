@@ -28,6 +28,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -68,11 +69,16 @@ fun HomeScreen(
     val selectedMinutes by viewModel.selectedMinutes.collectAsState()
     val bags by viewModel.bags.collectAsState()
     val isSessionActive by viewModel.isSessionActive.collectAsState()
+    val parachuteCount by viewModel.parachuteCount.collectAsState()
+    val selectedBagIndex by viewModel.selectedBagIndex.collectAsState()
 
     val isAccessibilityOn = FocusAccessibilityService.isServiceRunning
 
-    if (isSessionActive) {
-        onNavigateToLock()
+    // Fix 4: Use LaunchedEffect to avoid side-effects in composition body
+    LaunchedEffect(isSessionActive) {
+        if (isSessionActive) {
+            onNavigateToLock()
+        }
     }
 
     val hours = selectedMinutes / 60
@@ -88,13 +94,13 @@ fun HomeScreen(
     ) {
         Spacer(modifier = Modifier.height(14.dp))
 
-        // 1. TOP HEADER
+        // 1. TOP HEADER (Fix 1: live parachute count, fix streak floor removed)
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Left Pill: [Square dot] 10
+            // Left Pill: Streak count
             Row(
                 modifier = Modifier
                     .clip(RoundedCornerShape(20.dp))
@@ -109,7 +115,8 @@ fun HomeScreen(
                 )
                 Spacer(modifier = Modifier.width(7.dp))
                 Text(
-                    text = "${viewModel.getStreak().coerceAtLeast(10)}",
+                    // Fix 1a: Show real streak (no coerceAtLeast minimum)
+                    text = "${viewModel.getStreak()}",
                     fontFamily = GoogleSans,
                     fontWeight = FontWeight.Bold,
                     fontSize = 15.sp,
@@ -124,7 +131,7 @@ fun HomeScreen(
                 pulseColor = AccentOrange
             )
 
-            // Right Pill: [Parachute Circle] 0 | [Avatar Circle]
+            // Right Pill: Live parachute count + avatar
             Row(
                 modifier = Modifier
                     .clip(RoundedCornerShape(20.dp))
@@ -152,8 +159,9 @@ fun HomeScreen(
 
                 Spacer(modifier = Modifier.width(6.dp))
 
+                // Fix 1b: Show real parachute count from StateFlow
                 Text(
-                    text = "0",
+                    text = "$parachuteCount",
                     fontFamily = GoogleSans,
                     fontWeight = FontWeight.Bold,
                     fontSize = 14.sp,
@@ -301,7 +309,7 @@ fun HomeScreen(
                     )
                 }
 
-                // Row 2: "3 Hours" & "12:00 Custom (Locked)"
+                // Row 2: "3 Hours" & "12 Hours" (Fix 2: removed lock icon, now functional preset)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -315,9 +323,12 @@ fun HomeScreen(
                             .weight(1f)
                             .height(182.dp)
                     )
-                    CustomLockedCard(
-                        value = "12:00",
-                        label = "Custom",
+                    // Fix 2: No more lock icon — this is now a fully interactive 12-hour preset
+                    PresetCard(
+                        value = "12",
+                        label = "Hours",
+                        isSelected = selectedMinutes == 720,
+                        onClick = { viewModel.setMinutes(720) },
                         modifier = Modifier
                             .weight(1f)
                             .height(182.dp)
@@ -334,11 +345,67 @@ fun HomeScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
+        // Fix 3: BAG SELECTOR – Pill tabs to select which bag to use for session
+        if (bags.isNotEmpty()) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(22.dp),
+                colors = CardDefaults.cardColors(containerColor = SurfaceBright),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 10.dp)
+                ) {
+                    Text(
+                        text = "SELECT BAG",
+                        fontFamily = GoogleSans,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 10.sp,
+                        letterSpacing = 1.sp,
+                        color = SecondaryGray,
+                        modifier = Modifier.padding(start = 2.dp, bottom = 8.dp)
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        bags.take(3).forEachIndexed { index, bag ->
+                            val isSelected = index == selectedBagIndex
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(40.dp)
+                                    .clip(RoundedCornerShape(20.dp))
+                                    .background(if (isSelected) CharcoalPrimary else SurfaceVariant)
+                                    .clickable { viewModel.setSelectedBagIndex(index) },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = bag.name,
+                                    fontFamily = GoogleSans,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 12.sp,
+                                    color = if (isSelected) SurfaceBright else SecondaryGray
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+        }
+
         // 4. SLIDE TO START
         SlideToStart(
             onSlideComplete = {
-                val currentBag = bags.firstOrNull() ?: BagEntity(name = "Default", isDefault = true)
-                viewModel.startFocusSession(currentBag)
+                // Fix 3: Use the selected bag, not just the first one
+                val bagToUse = bags.getOrNull(selectedBagIndex)
+                    ?: bags.firstOrNull()
+                    ?: BagEntity(name = "Default", isDefault = true)
+                viewModel.startFocusSession(bagToUse)
                 onNavigateToLock()
             },
             text = "SLIDE TO START"
@@ -362,7 +429,7 @@ fun PresetCard(
             .clickable { onClick() },
         shape = RoundedCornerShape(28.dp),
         colors = CardDefaults.cardColors(
-            containerColor = SurfaceVariant
+            containerColor = if (isSelected) CharcoalPrimary else SurfaceVariant
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
@@ -378,7 +445,7 @@ fun PresetCard(
                 fontFamily = GoogleSans,
                 fontWeight = FontWeight.Bold,
                 fontSize = 34.sp,
-                color = CharcoalPrimary
+                color = if (isSelected) SurfaceBright else CharcoalPrimary
             )
             Spacer(modifier = Modifier.height(2.dp))
             Text(
@@ -386,54 +453,7 @@ fun PresetCard(
                 fontFamily = GoogleSans,
                 fontWeight = FontWeight.Bold,
                 fontSize = 13.sp,
-                color = SecondaryGray
-            )
-        }
-    }
-}
-
-@Composable
-fun CustomLockedCard(
-    value: String,
-    label: String,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        modifier = modifier.clip(RoundedCornerShape(28.dp)),
-        shape = RoundedCornerShape(28.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = SurfaceVariant
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 12.dp, vertical = 16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Icon(
-                painter = painterResource(id = R.drawable.ic_lock),
-                contentDescription = "Locked",
-                tint = AccentOrange,
-                modifier = Modifier.size(16.dp)
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = value,
-                fontFamily = GoogleSans,
-                fontWeight = FontWeight.Bold,
-                fontSize = 26.sp,
-                color = SecondaryMuted
-            )
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(
-                text = label,
-                fontFamily = GoogleSans,
-                fontWeight = FontWeight.Bold,
-                fontSize = 13.sp,
-                color = SecondaryMuted
+                color = if (isSelected) SurfaceBright.copy(alpha = 0.7f) else SecondaryGray
             )
         }
     }

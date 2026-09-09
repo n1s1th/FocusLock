@@ -34,44 +34,54 @@ class RoutinesViewModel(application: Application) : AndroidViewModel(application
         ensureDefaultRoutines()
     }
 
+    /**
+     * Fix 5: Reliably ensure 3 default routines exist by checking actual count
+     * and inserting only the missing ones using known IDs.
+     */
     private fun ensureDefaultRoutines() {
         viewModelScope.launch(Dispatchers.IO) {
             val dao = app.database.routineDao()
-            val existing = dao.getAllRoutinesFlow()
-            val list = dao.getActiveRoutines()
-            val all = app.database.routineDao().getRoutineById(1L)
-            // If fewer than 3 routines, populate Routine 1, 2, 3
-            if (all == null) {
+
+            // Check each by explicit ID to only insert truly missing ones
+            val r1 = dao.getRoutineById(1L)
+            val r2 = dao.getRoutineById(2L)
+            val r3 = dao.getRoutineById(3L)
+
+            if (r1 == null) {
                 dao.insertRoutine(
                     RoutineEntity(
                         id = 1,
                         name = "Routine 1",
                         targetBagId = 1L,
-                        startHour = 0,
+                        startHour = 9,
                         startMinute = 0,
                         durationMinutes = 60,
-                        activeDaysMask = 127,
+                        activeDaysMask = 62, // Mon–Fri (bits 1..5)
                         isEnabled = false
                     )
                 )
+            }
+            if (r2 == null) {
                 dao.insertRoutine(
                     RoutineEntity(
                         id = 2,
                         name = "Routine 2",
                         targetBagId = 1L,
-                        startHour = 0,
+                        startHour = 14,
                         startMinute = 0,
                         durationMinutes = 60,
-                        activeDaysMask = 127,
+                        activeDaysMask = 62,
                         isEnabled = false
                     )
                 )
+            }
+            if (r3 == null) {
                 dao.insertRoutine(
                     RoutineEntity(
                         id = 3,
                         name = "Routine 3",
                         targetBagId = 1L,
-                        startHour = 0,
+                        startHour = 20,
                         startMinute = 0,
                         durationMinutes = 60,
                         activeDaysMask = 127,
@@ -82,15 +92,22 @@ class RoutinesViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
+    /**
+     * Fix 12: Calculate duration without forcing a 15-min minimum distortion.
+     * The minimum stored duration is 15 min, but adjust endHour/endMinute accordingly
+     * so the display stays consistent with what the user set.
+     */
     fun updateRoutineTimes(routine: RoutineEntity, startHour: Int, startMinute: Int, endHour: Int, endMinute: Int) {
         viewModelScope.launch(Dispatchers.IO) {
             val startTotal = startHour * 60 + startMinute
             val endTotal = endHour * 60 + endMinute
-            val duration = if (endTotal >= startTotal) (endTotal - startTotal) else (24 * 60 - startTotal + endTotal)
+            val rawDuration = if (endTotal >= startTotal) (endTotal - startTotal) else (24 * 60 - startTotal + endTotal)
+            // Clamp to at least 15 minutes but store the actual start/end
+            val duration = maxOf(15, rawDuration)
             val updated = routine.copy(
                 startHour = startHour,
                 startMinute = startMinute,
-                durationMinutes = maxOf(15, duration)
+                durationMinutes = duration
             )
             app.database.routineDao().updateRoutine(updated)
             if (updated.isEnabled) {

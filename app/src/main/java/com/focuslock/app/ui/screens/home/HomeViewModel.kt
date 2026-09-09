@@ -11,7 +11,6 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.launch
 
 class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -24,11 +23,19 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     private val _selectedMinutes = MutableStateFlow(25)
     val selectedMinutes: StateFlow<Int> = _selectedMinutes.asStateFlow()
 
-    private val _selectedBagId = MutableStateFlow(1L)
-    val selectedBagId: StateFlow<Int> = MutableStateFlow(0) // index for UI selection
+    // Selected bag index for the Home screen bag picker
+    private val _selectedBagIndex = MutableStateFlow(0)
+    val selectedBagIndex: StateFlow<Int> = _selectedBagIndex.asStateFlow()
+
+    // Live parachute count (from preferences StateFlow)
+    val parachuteCount: StateFlow<Int> = app.preferences.parachutesStateFlow
 
     fun setMinutes(minutes: Int) {
         _selectedMinutes.value = minutes
+    }
+
+    fun setSelectedBagIndex(index: Int) {
+        _selectedBagIndex.value = index
     }
 
     fun startFocusSession(bag: BagEntity) {
