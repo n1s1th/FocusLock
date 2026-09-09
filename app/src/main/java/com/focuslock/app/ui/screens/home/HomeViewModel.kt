@@ -38,15 +38,20 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         _selectedBagIndex.value = index
     }
 
-    fun startFocusSession(bag: BagEntity) {
+    fun startFocusSession(bag: BagEntity? = null) {
         val duration = _selectedMinutes.value
         val endTime = System.currentTimeMillis() + (duration * 60 * 1000L)
+        val selectedBagId = app.preferences.getSelectedBagId()
+        val targetBag = bag
+            ?: bags.value.find { it.id == selectedBagId }
+            ?: bags.value.firstOrNull()
+            ?: BagEntity(id = selectedBagId, name = app.preferences.getActiveBagName(), isDefault = true)
 
         app.preferences.startSession(
             endTimeMillis = endTime,
             durationMinutes = duration,
-            bagId = bag.id,
-            bagName = bag.name
+            bagId = targetBag.id,
+            bagName = targetBag.name
         )
 
         FocusLockService.startService(app)

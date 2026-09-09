@@ -29,6 +29,18 @@ class AppPreferences(context: Context) {
 
     fun getActiveBagName(): String = prefs.getString(KEY_ACTIVE_BAG_NAME, "Deep Focus") ?: "Deep Focus"
 
+    fun setSelectedBagId(id: Long) {
+        prefs.edit().putLong(KEY_SELECTED_BAG_ID, id).apply()
+    }
+
+    fun getSelectedBagId(): Long = prefs.getLong(KEY_SELECTED_BAG_ID, 1L)
+
+    fun setSelectedBagIndex(index: Int) {
+        prefs.edit().putInt(KEY_SELECTED_BAG_INDEX, index).apply()
+    }
+
+    fun getSelectedBagIndex(): Int = prefs.getInt(KEY_SELECTED_BAG_INDEX, 0)
+
     fun getDistractionsBlockedCount(): Int = prefs.getInt(KEY_DISTRACTIONS_BLOCKED, 0)
 
     fun isBlockRecentsEnabled(): Boolean = prefs.getBoolean(KEY_BLOCK_RECENTS, true)
@@ -236,6 +248,8 @@ class AppPreferences(context: Context) {
         private const val KEY_SESSION_TOTAL_MINUTES = "session_total_minutes"
         private const val KEY_ACTIVE_BAG_ID = "active_bag_id"
         private const val KEY_ACTIVE_BAG_NAME = "active_bag_name"
+        private const val KEY_SELECTED_BAG_ID = "selected_bag_id"
+        private const val KEY_SELECTED_BAG_INDEX = "selected_bag_index"
         private const val KEY_DISTRACTIONS_BLOCKED = "distractions_blocked"
         private const val KEY_BLOCK_RECENTS = "block_recents"
         private const val KEY_BLOCK_SHADE = "block_shade"

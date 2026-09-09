@@ -1,6 +1,7 @@
 package com.focuslock.app.ui.screens.bags.components
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
@@ -87,6 +88,7 @@ fun SingleBagPixelArt(
 @Composable
 fun ThreeBagsRowDisplay(
     selectedIndex: Int,
+    onBagSelected: (Int) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     Row(
@@ -96,15 +98,19 @@ fun ThreeBagsRowDisplay(
     ) {
         SingleBagPixelArt(
             isSelected = selectedIndex == 0,
-            pixelSize = 5.5.dp
+            pixelSize = 5.5.dp,
+            modifier = Modifier.clickable { onBagSelected(0) }
         )
         SingleBagPixelArt(
             isSelected = selectedIndex == 1,
-            pixelSize = 5.5.dp
+            pixelSize = 5.5.dp,
+            modifier = Modifier.clickable { onBagSelected(1) }
         )
         SingleBagPixelArt(
             isSelected = selectedIndex == 2,
-            pixelSize = 5.5.dp
+            pixelSize = 5.5.dp,
+            modifier = Modifier.clickable { onBagSelected(2) }
         )
     }
 }
+

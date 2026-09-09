@@ -51,6 +51,13 @@ class BagsViewModel(application: Application) : AndroidViewModel(application) {
     val currentStreak: Int
         get() = preferences.getCurrentStreak()
 
+    fun getSelectedBagIndex(): Int = preferences.getSelectedBagIndex()
+
+    fun setSelectedBag(bag: BagEntity, index: Int) {
+        preferences.setSelectedBagId(bag.id)
+        preferences.setSelectedBagIndex(index)
+    }
+
     init {
         loadInstalledApps()
         ensureDefaultBags()

@@ -67,10 +67,8 @@ fun HomeScreen(
 ) {
     val context = LocalContext.current
     val selectedMinutes by viewModel.selectedMinutes.collectAsState()
-    val bags by viewModel.bags.collectAsState()
     val isSessionActive by viewModel.isSessionActive.collectAsState()
     val parachuteCount by viewModel.parachuteCount.collectAsState()
-    val selectedBagIndex by viewModel.selectedBagIndex.collectAsState()
 
     val isAccessibilityOn = FocusAccessibilityService.isServiceRunning
 
@@ -345,67 +343,10 @@ fun HomeScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Fix 3: BAG SELECTOR – Pill tabs to select which bag to use for session
-        if (bags.isNotEmpty()) {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(22.dp),
-                colors = CardDefaults.cardColors(containerColor = SurfaceBright),
-                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 10.dp)
-                ) {
-                    Text(
-                        text = "SELECT BAG",
-                        fontFamily = GoogleSans,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 10.sp,
-                        letterSpacing = 1.sp,
-                        color = SecondaryGray,
-                        modifier = Modifier.padding(start = 2.dp, bottom = 8.dp)
-                    )
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        bags.take(3).forEachIndexed { index, bag ->
-                            val isSelected = index == selectedBagIndex
-                            Box(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .height(40.dp)
-                                    .clip(RoundedCornerShape(20.dp))
-                                    .background(if (isSelected) CharcoalPrimary else SurfaceVariant)
-                                    .clickable { viewModel.setSelectedBagIndex(index) },
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = bag.name,
-                                    fontFamily = GoogleSans,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 12.sp,
-                                    color = if (isSelected) SurfaceBright else SecondaryGray
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-        }
-
         // 4. SLIDE TO START
         SlideToStart(
             onSlideComplete = {
-                // Fix 3: Use the selected bag, not just the first one
-                val bagToUse = bags.getOrNull(selectedBagIndex)
-                    ?: bags.firstOrNull()
-                    ?: BagEntity(name = "Default", isDefault = true)
-                viewModel.startFocusSession(bagToUse)
+                viewModel.startFocusSession()
                 onNavigateToLock()
             },
             text = "SLIDE TO START"

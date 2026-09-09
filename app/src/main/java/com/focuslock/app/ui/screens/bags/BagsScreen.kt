@@ -89,10 +89,17 @@ fun BagsScreen(
     val isRequestReady by viewModel.isRequestReady.collectAsState()
     val requestRemainingMillis by viewModel.requestRemainingMillis.collectAsState()
 
-    var selectedBagIndex by remember { mutableIntStateOf(0) }
+    var selectedBagIndex by remember { mutableIntStateOf(viewModel.getSelectedBagIndex()) }
     var selectedSlotIndex by remember { mutableIntStateOf(-1) }
     var showSlotActionSheet by remember { mutableStateOf(false) }
     var showAppPicker by remember { mutableStateOf(false) }
+
+    // Persist whichever bag is selected on the Bags screen so Home screen automatically uses it
+    LaunchedEffect(selectedBagIndex, bags) {
+        bags.getOrNull(selectedBagIndex)?.let { bag ->
+            viewModel.setSelectedBag(bag, selectedBagIndex)
+        }
+    }
 
     val currentBag = bags.getOrNull(selectedBagIndex)
 
@@ -128,7 +135,10 @@ fun BagsScreen(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
-                ThreeBagsRowDisplay(selectedIndex = selectedBagIndex)
+                ThreeBagsRowDisplay(
+                    selectedIndex = selectedBagIndex,
+                    onBagSelected = { selectedBagIndex = it }
+                )
             }
         }
 
