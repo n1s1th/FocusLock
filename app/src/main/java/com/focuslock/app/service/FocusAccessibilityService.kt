@@ -17,11 +17,10 @@ import java.util.Locale
 class FocusAccessibilityService : AccessibilityService() {
 
     private val serviceScope = CoroutineScope(Dispatchers.IO)
-    private var allowedPackagesCache: Set<String> = emptySet()
     private var lastInspectionTime = 0L
     private var lastBlockedPackage: String? = null
 
-    // Essential system packages that must never be blocked (emergency calls, input methods)
+    // Essential system packages that must never be blocked (emergency calls, input methods, system UI/permissions)
     private val systemEssentialPackages = setOf(
         "android",
         "com.android.phone",
@@ -33,12 +32,62 @@ class FocusAccessibilityService : AccessibilityService() {
         "com.android.inputmethod.latin",
         "com.samsung.android.honeyboard",
         "com.google.android.deskclock",
-        "com.android.deskclock"
+        "com.android.deskclock",
+        "com.google.android.permissioncontroller",
+        "com.android.permissioncontroller",
+        "com.android.packageinstaller",
+        "com.google.android.packageinstaller",
+        "com.android.documentsui",
+        "com.google.android.documentsui",
+        "com.google.android.settings.intelligence",
+        "com.google.android.gms",
+        "com.google.android.gsf"
     )
 
     companion object {
         var isServiceRunning: Boolean = false
             private set
+
+        @Volatile
+        var allowedPackagesCache: Set<String> = emptySet()
+            private set
+
+        @Volatile
+        var lastAllowedLaunchTime: Long = 0L
+            private set
+
+        @Volatile
+        var currentlyLaunchingPackage: String? = null
+            private set
+
+        fun updateAllowedPackages(packages: Set<String>) {
+            allowedPackagesCache = packages
+            Log.d("FocusA11y", "Updated allowedPackagesCache: ${packages.size} items: $packages")
+        }
+
+        fun notifyAppLaunching(packageName: String) {
+            currentlyLaunchingPackage = packageName
+            lastAllowedLaunchTime = SystemClock.uptimeMillis()
+            Log.d("FocusA11y", "App launching initiated for: $packageName at $lastAllowedLaunchTime")
+        }
+    }
+
+    private var defaultLauncherPackage: String? = null
+
+    private fun isLauncherPackage(packageName: String): Boolean {
+        if (defaultLauncherPackage == null) {
+            try {
+                val homeIntent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
+                defaultLauncherPackage = packageManager.resolveActivity(homeIntent, 0)?.activityInfo?.packageName
+            } catch (e: Exception) {
+                // Ignore
+            }
+        }
+        return defaultLauncherPackage == packageName ||
+                packageName == "com.google.android.apps.nexuslauncher" ||
+                packageName == "com.android.launcher3" ||
+                packageName == "com.sec.android.app.launcher" ||
+                packageName.contains("launcher", ignoreCase = true)
     }
 
     override fun onServiceConnected() {
@@ -60,6 +109,13 @@ class FocusAccessibilityService : AccessibilityService() {
             return
         }
 
+        // Only enforce distraction blocking on real window state / window hierarchy changes
+        val eventType = event.eventType
+        if (eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED &&
+            eventType != AccessibilityEvent.TYPE_WINDOWS_CHANGED) {
+            return
+        }
+
         val packageName = event.packageName?.toString() ?: return
         val className = event.className?.toString() ?: ""
 
@@ -74,9 +130,18 @@ class FocusAccessibilityService : AccessibilityService() {
             return
         }
 
-        // Check if package is system essential
+        // Check if package is system essential (Emergency phone, dialer, keyboards, alarms)
         if (systemEssentialPackages.contains(packageName)) {
             return
+        }
+
+        // If an allowed app is currently launching, ignore launcher transition events (2.5s window)
+        val timeSinceLaunch = SystemClock.uptimeMillis() - lastAllowedLaunchTime
+        if (timeSinceLaunch < 2500L) {
+            if (packageName == currentlyLaunchingPackage || isLauncherPackage(packageName)) {
+                Log.d("FocusA11y", "Allowing transition window event: $packageName (launching: $currentlyLaunchingPackage)")
+                return
+            }
         }
 
         // Rate limit inspections slightly to avoid CPU spikes
@@ -135,13 +200,31 @@ class FocusAccessibilityService : AccessibilityService() {
     }
 
     private fun isPackageAllowed(packageName: String): Boolean {
+        // 1. Essential system apps
+        if (systemEssentialPackages.contains(packageName)) return true
+
+        // 2. Currently launching allowed app within 3 seconds
+        if (packageName == currentlyLaunchingPackage && (SystemClock.uptimeMillis() - lastAllowedLaunchTime < 3000L)) {
+            return true
+        }
+
+        // 3. Fast in-memory cache
         if (allowedPackagesCache.contains(packageName)) return true
 
-        // Refresh cache in background if empty
-        if (allowedPackagesCache.isEmpty()) {
+        // 4. Live SharedPreferences check
+        val activeAllowed = FocusLockApp.instance.preferences.getActiveAllowedPackages()
+        if (activeAllowed.contains(packageName)) {
+            allowedPackagesCache = activeAllowed
+            return true
+        }
+
+        // 5. Fallback refresh from database
+        val activeBagId = FocusLockApp.instance.preferences.getActiveBagId()
+        if (activeAllowed.isEmpty() && activeBagId > 0) {
             refreshAllowedPackages()
         }
-        return allowedPackagesCache.contains(packageName)
+
+        return false
     }
 
     fun refreshAllowedPackages() {
@@ -149,7 +232,10 @@ class FocusAccessibilityService : AccessibilityService() {
             val app = FocusLockApp.instance
             val activeBagId = app.preferences.getActiveBagId()
             val bag = app.database.bagDao().getBagById(activeBagId)
-            allowedPackagesCache = (bag?.allowedPackages ?: emptyList()).toSet() + systemEssentialPackages
+            val bagPackages = (bag?.allowedPackages ?: emptyList()).filter { it.isNotBlank() }.toSet()
+            app.preferences.setActiveAllowedPackages(bagPackages)
+            allowedPackagesCache = bagPackages
+            Log.d("FocusA11y", "Refreshed allowed packages for bag $activeBagId: $bagPackages")
         }
     }
 

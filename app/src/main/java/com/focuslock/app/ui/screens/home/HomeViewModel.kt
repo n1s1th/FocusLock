@@ -47,11 +47,16 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             ?: bags.value.firstOrNull()
             ?: BagEntity(id = selectedBagId, name = app.preferences.getActiveBagName(), isDefault = true)
 
+        val allowed = targetBag.allowedPackages.filter { it.isNotBlank() }
+        app.preferences.setActiveAllowedPackages(allowed)
+        com.focuslock.app.service.FocusAccessibilityService.updateAllowedPackages(allowed.toSet())
+
         app.preferences.startSession(
             endTimeMillis = endTime,
             durationMinutes = duration,
             bagId = targetBag.id,
-            bagName = targetBag.name
+            bagName = targetBag.name,
+            allowedPackages = allowed
         )
 
         FocusLockService.startService(app)

@@ -1,8 +1,14 @@
 package com.focuslock.app.ui.screens.lock
 
+import android.app.Activity
+import android.app.KeyguardManager
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
+import android.util.Log
 import android.view.HapticFeedbackConstants
+import com.focuslock.app.service.FocusAccessibilityService
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
@@ -152,7 +158,11 @@ fun LockScreenContent(
     // Live countdown loop
     LaunchedEffect(Unit) {
         val bagId = app.preferences.getActiveBagId()
-        bagEntity = app.database.bagDao().getBagById(bagId)
+        val loadedBag = app.database.bagDao().getBagById(bagId)
+        bagEntity = loadedBag
+        val nonBlank = (loadedBag?.allowedPackages ?: emptyList()).filter { it.isNotBlank() }
+        app.preferences.setActiveAllowedPackages(nonBlank)
+        FocusAccessibilityService.updateAllowedPackages(nonBlank.toSet())
 
         while (true) {
             val endMillis = app.preferences.getSessionEndTimeMillis()
@@ -481,11 +491,13 @@ fun LockScreenContent(
                                     val currentEnd = app.preferences.getSessionEndTimeMillis()
                                     val newEnd = currentEnd + (15 * 60 * 1000L)
                                     val totalMin = app.preferences.getSessionTotalDurationMinutes() + 15
+                                    val currentPkgs = (bagEntity?.allowedPackages ?: emptyList()).filter { it.isNotBlank() }
                                     app.preferences.startSession(
                                         endTimeMillis = newEnd,
                                         durationMinutes = totalMin,
                                         bagId = app.preferences.getActiveBagId(),
-                                        bagName = app.preferences.getActiveBagName()
+                                        bagName = app.preferences.getActiveBagName(),
+                                        allowedPackages = currentPkgs
                                     )
                                 }
                             },
@@ -630,7 +642,7 @@ fun LockScreenContent(
                                     if (!isAmbientMode) {
                                         val intent = context.packageManager.getLaunchIntentForPackage(pkg)
                                         if (intent != null) {
-                                            context.startActivity(intent)
+                                            launchAllowedApp(context, intent, pkg)
                                         }
                                     }
                                 }
@@ -652,7 +664,8 @@ fun LockScreenContent(
                         .clickable {
                             if (!isAmbientMode) {
                                 val dialIntent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:"))
-                                context.startActivity(dialIntent)
+                                val dialerPkg = context.packageManager.resolveActivity(dialIntent, 0)?.activityInfo?.packageName ?: "com.google.android.dialer"
+                                launchAllowedApp(context, dialIntent, dialerPkg)
                             }
                         },
                     contentAlignment = Alignment.Center
@@ -991,3 +1004,49 @@ fun EmptyAllowedSlotCircle() {
         )
     }
 }
+
+private fun launchAllowedApp(context: Context, intent: Intent, packageName: String) {
+    FocusAccessibilityService.notifyAppLaunching(packageName)
+    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED)
+
+    val activity = context.findActivity()
+    val keyguardManager = context.getSystemService(Context.KEYGUARD_SERVICE) as? KeyguardManager
+
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && activity != null && keyguardManager?.isKeyguardLocked == true) {
+        keyguardManager.requestDismissKeyguard(activity, object : KeyguardManager.KeyguardDismissCallback() {
+            override fun onDismissSucceeded() {
+                try {
+                    context.startActivity(intent)
+                } catch (e: Exception) {
+                    Log.e("LockScreen", "Failed to launch allowed app: $packageName", e)
+                }
+            }
+            override fun onDismissError() {
+                try {
+                    context.startActivity(intent)
+                } catch (e: Exception) {
+                    Log.e("LockScreen", "Failed to launch allowed app: $packageName", e)
+                }
+            }
+            override fun onDismissCancelled() {
+                Log.d("LockScreen", "Keyguard dismiss cancelled by user")
+            }
+        })
+    } else {
+        try {
+            context.startActivity(intent)
+        } catch (e: Exception) {
+            Log.e("LockScreen", "Failed to launch allowed app: $packageName", e)
+        }
+    }
+}
+
+private fun Context.findActivity(): Activity? {
+    var ctx = this
+    while (ctx is android.content.ContextWrapper) {
+        if (ctx is Activity) return ctx
+        ctx = ctx.baseContext
+    }
+    return null
+}
+

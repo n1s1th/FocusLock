@@ -174,14 +174,56 @@ class AppPreferences(context: Context) {
         prefs.edit().putLong(KEY_PARACHUTE_REQUEST_TIME, 0L).apply()
     }
 
-    fun startSession(endTimeMillis: Long, durationMinutes: Int, bagId: Long, bagName: String) {
-        prefs.edit()
+    @Volatile
+    private var _cachedAllowedPackages: Set<String>? = null
+
+    fun setActiveAllowedPackages(packages: Collection<String>) {
+        val clean = packages.filter { it.isNotBlank() }.toSet()
+        _cachedAllowedPackages = clean
+        prefs.edit().putStringSet(KEY_ACTIVE_ALLOWED_PACKAGES, clean).apply()
+        try {
+            com.focuslock.app.service.FocusAccessibilityService.updateAllowedPackages(clean)
+        } catch (e: Exception) {
+            // Ignore if service not ready
+        }
+    }
+
+    fun getActiveAllowedPackages(): Set<String> {
+        val mem = _cachedAllowedPackages
+        if (mem != null && mem.isNotEmpty()) {
+            return mem
+        }
+        val fromPrefs = prefs.getStringSet(KEY_ACTIVE_ALLOWED_PACKAGES, emptySet()) ?: emptySet()
+        _cachedAllowedPackages = fromPrefs
+        return fromPrefs
+    }
+
+    fun startSession(
+        endTimeMillis: Long,
+        durationMinutes: Int,
+        bagId: Long,
+        bagName: String,
+        allowedPackages: List<String> = emptyList()
+    ) {
+        val editor = prefs.edit()
             .putLong(KEY_SESSION_END_MILLIS, endTimeMillis)
             .putInt(KEY_SESSION_TOTAL_MINUTES, durationMinutes)
             .putLong(KEY_ACTIVE_BAG_ID, bagId)
             .putString(KEY_ACTIVE_BAG_NAME, bagName)
             .putInt(KEY_DISTRACTIONS_BLOCKED, 0)
-            .apply()
+
+        if (allowedPackages.isNotEmpty()) {
+            val clean = allowedPackages.filter { it.isNotBlank() }.toSet()
+            _cachedAllowedPackages = clean
+            editor.putStringSet(KEY_ACTIVE_ALLOWED_PACKAGES, clean)
+            try {
+                com.focuslock.app.service.FocusAccessibilityService.updateAllowedPackages(clean)
+            } catch (e: Exception) {
+                // Ignore
+            }
+        }
+
+        editor.apply()
         _isSessionActiveFlow.value = true
         recordStreakActivity()
     }
@@ -248,6 +290,7 @@ class AppPreferences(context: Context) {
         private const val KEY_SESSION_TOTAL_MINUTES = "session_total_minutes"
         private const val KEY_ACTIVE_BAG_ID = "active_bag_id"
         private const val KEY_ACTIVE_BAG_NAME = "active_bag_name"
+        private const val KEY_ACTIVE_ALLOWED_PACKAGES = "active_allowed_packages"
         private const val KEY_SELECTED_BAG_ID = "selected_bag_id"
         private const val KEY_SELECTED_BAG_INDEX = "selected_bag_index"
         private const val KEY_DISTRACTIONS_BLOCKED = "distractions_blocked"

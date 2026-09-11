@@ -56,6 +56,9 @@ class BagsViewModel(application: Application) : AndroidViewModel(application) {
     fun setSelectedBag(bag: BagEntity, index: Int) {
         preferences.setSelectedBagId(bag.id)
         preferences.setSelectedBagIndex(index)
+        val nonBlank = bag.allowedPackages.filter { it.isNotBlank() }
+        preferences.setActiveAllowedPackages(nonBlank)
+        com.focuslock.app.service.FocusAccessibilityService.updateAllowedPackages(nonBlank.toSet())
     }
 
     init {
@@ -176,7 +179,13 @@ class BagsViewModel(application: Application) : AndroidViewModel(application) {
 
     fun updateBagAllowedPackages(bag: BagEntity, newPackages: List<String>) {
         viewModelScope.launch(Dispatchers.IO) {
-            app.database.bagDao().updateBag(bag.copy(allowedPackages = newPackages.take(6)))
+            val filtered = newPackages.take(6)
+            app.database.bagDao().updateBag(bag.copy(allowedPackages = filtered))
+            if (bag.id == preferences.getSelectedBagId() || bag.id == preferences.getActiveBagId()) {
+                val nonBlank = filtered.filter { it.isNotBlank() }
+                preferences.setActiveAllowedPackages(nonBlank)
+                com.focuslock.app.service.FocusAccessibilityService.updateAllowedPackages(nonBlank.toSet())
+            }
         }
     }
 
@@ -189,6 +198,11 @@ class BagsViewModel(application: Application) : AndroidViewModel(application) {
             currentList[slotIndex] = packageName
             val filtered = currentList.take(6)
             app.database.bagDao().updateBag(bag.copy(allowedPackages = filtered))
+            if (bag.id == preferences.getSelectedBagId() || bag.id == preferences.getActiveBagId()) {
+                val nonBlank = filtered.filter { it.isNotBlank() }
+                preferences.setActiveAllowedPackages(nonBlank)
+                com.focuslock.app.service.FocusAccessibilityService.updateAllowedPackages(nonBlank.toSet())
+            }
         }
     }
 
@@ -197,7 +211,13 @@ class BagsViewModel(application: Application) : AndroidViewModel(application) {
             val currentList = bag.allowedPackages.toMutableList()
             if (slotIndex in currentList.indices) {
                 currentList[slotIndex] = ""
-                app.database.bagDao().updateBag(bag.copy(allowedPackages = currentList))
+                val filtered = currentList.take(6)
+                app.database.bagDao().updateBag(bag.copy(allowedPackages = filtered))
+                if (bag.id == preferences.getSelectedBagId() || bag.id == preferences.getActiveBagId()) {
+                    val nonBlank = filtered.filter { it.isNotBlank() }
+                    preferences.setActiveAllowedPackages(nonBlank)
+                    com.focuslock.app.service.FocusAccessibilityService.updateAllowedPackages(nonBlank.toSet())
+                }
             }
         }
     }

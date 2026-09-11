@@ -28,8 +28,11 @@ class RoutineAlarmReceiver : BroadcastReceiver() {
             app.applicationScope.launch(Dispatchers.IO) {
                 val bag = app.database.bagDao().getBagById(bagId)
                 val bagName = bag?.name ?: "Scheduled Bag"
+                val allowed = bag?.allowedPackages?.filter { it.isNotBlank() } ?: emptyList()
+                app.preferences.setActiveAllowedPackages(allowed)
+                com.focuslock.app.service.FocusAccessibilityService.updateAllowedPackages(allowed.toSet())
 
-                app.preferences.startSession(endTime, durationMinutes, bagId, bagName)
+                app.preferences.startSession(endTime, durationMinutes, bagId, bagName, allowed)
                 FocusLockService.startService(context)
             }
         }
