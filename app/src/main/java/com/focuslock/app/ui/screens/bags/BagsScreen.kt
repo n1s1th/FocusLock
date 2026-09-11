@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -109,7 +110,7 @@ fun BagsScreen(
             .background(ScreenBackground)
             .padding(horizontal = 16.dp, vertical = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.SpaceBetween
+        verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         // 1. TOP HEADER (Live Streaks + Total Parachutes)
         TopHeaderBar(
@@ -122,7 +123,7 @@ fun BagsScreen(
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(155.dp),
+                .height(175.dp),
             shape = RoundedCornerShape(32.dp),
             colors = CardDefaults.cardColors(containerColor = SurfaceBright),
             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
@@ -140,15 +141,18 @@ fun BagsScreen(
 
         // 3. MIDDLE SECTION (3 Bag Tabs + 6 App Slots Grid)
         Card(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f),
             shape = RoundedCornerShape(26.dp),
             colors = CardDefaults.cardColors(containerColor = SurfaceVariant),
             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
         ) {
             Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 10.dp)
+                    .fillMaxSize()
+                    .padding(horizontal = 12.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.SpaceEvenly
             ) {
                 // 3 Bag Selector Pill Tabs
                 Row(
@@ -177,8 +181,6 @@ fun BagsScreen(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(8.dp))
-
                 // 6 App Spaces (2 Rows of 3 Slots, 100% Unlocked, Zero Locks)
                 val currentPackages = currentBag?.allowedPackages ?: emptyList()
 
@@ -205,8 +207,6 @@ fun BagsScreen(
                         )
                     }
                 }
-
-                Spacer(modifier = Modifier.height(8.dp))
 
                 // Row 2: Slots 3, 4, 5
                 Row(
@@ -236,14 +236,16 @@ fun BagsScreen(
 
         // 4. BOTTOM PARACHUTE SECTION (100% Free - Weekly + 5h Cooldown, Zero Payments)
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(155.dp),
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             // Left Parachute Balance Card
             Card(
                 modifier = Modifier
                     .width(92.dp)
-                    .height(145.dp),
+                    .fillMaxHeight(),
                 shape = RoundedCornerShape(22.dp),
                 colors = CardDefaults.cardColors(containerColor = Color.Transparent),
                 border = androidx.compose.foundation.BorderStroke(1.dp, OutlineSubtle),
@@ -306,7 +308,7 @@ fun BagsScreen(
             Column(
                 modifier = Modifier
                     .weight(1f)
-                    .height(145.dp),
+                    .fillMaxHeight(),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 // 1. Weekly Parachute Status Card (1 Free / Week)
@@ -576,7 +578,7 @@ fun AppSlotItem(
 
     Card(
         modifier = modifier
-            .height(58.dp)
+            .height(64.dp)
             .clip(RoundedCornerShape(14.dp))
             .clickable { onClick() },
         shape = RoundedCornerShape(14.dp),

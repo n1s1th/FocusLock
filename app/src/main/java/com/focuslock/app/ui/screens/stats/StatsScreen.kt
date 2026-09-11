@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -95,7 +96,7 @@ fun StatsScreen(
             .background(ScreenBackground)
             .padding(horizontal = 16.dp, vertical = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.SpaceBetween
+        verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         // 1. TOP HEADER — Fix 5: live streak + parachute count
         TopHeaderBar(
@@ -108,7 +109,7 @@ fun StatsScreen(
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(145.dp),
+                .height(180.dp),
             shape = RoundedCornerShape(32.dp),
             colors = CardDefaults.cardColors(containerColor = SurfaceBright),
             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
@@ -116,7 +117,7 @@ fun StatsScreen(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(horizontal = 20.dp, vertical = 14.dp),
+                    .padding(horizontal = 20.dp, vertical = 16.dp),
                 contentAlignment = Alignment.BottomStart
             ) {
                 Canvas(modifier = Modifier.fillMaxSize()) {
@@ -153,133 +154,141 @@ fun StatsScreen(
             }
         }
 
-        // Fix 5: Real day label from today's actual session data
-        Text(
-            text = dayLabel,
-            fontFamily = GoogleSans,
-            fontWeight = FontWeight.Bold,
-            fontSize = 10.sp,
-            letterSpacing = 1.2.sp,
-            color = SecondaryGray
-        )
-
-        // 3. DATE SELECTOR CARD — Fix 5: working prev/next navigation
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(52.dp),
-            shape = RoundedCornerShape(20.dp),
-            colors = CardDefaults.cardColors(containerColor = SurfaceVariant),
-            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+        // 3. DATE SELECTOR SECTION (Day label + navigation card)
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            Row(
-                modifier = Modifier.fillMaxSize(),
-                verticalAlignment = Alignment.CenterVertically
+            // Fix 5: Real day label from today's actual session data
+            Text(
+                text = dayLabel,
+                fontFamily = GoogleSans,
+                fontWeight = FontWeight.Bold,
+                fontSize = 11.sp,
+                letterSpacing = 1.2.sp,
+                color = SecondaryGray
+            )
+
+            // 3. DATE SELECTOR CARD — Fix 5: working prev/next navigation
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp),
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = SurfaceVariant),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
             ) {
-                // Prev Button
-                Box(
-                    modifier = Modifier
-                        .size(52.dp)
-                        .clickable {
-                            // Fix 5: Navigate backward in time
-                            val prev = displayedCalendar.clone() as Calendar
-                            when (selectedPeriodMode) {
-                                0 -> prev.add(Calendar.DAY_OF_YEAR, -1)
-                                1 -> prev.add(Calendar.MONTH, -1)
-                                2 -> prev.add(Calendar.YEAR, -1)
-                            }
-                            displayedCalendar = prev
-                        },
-                    contentAlignment = Alignment.Center
+                Row(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-                        contentDescription = "Previous",
-                        tint = SecondaryGray,
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-
-                Box(
-                    modifier = Modifier
-                        .width(1.dp)
-                        .height(52.dp)
-                        .background(OutlineSubtle)
-                )
-
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(52.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    // Fix 5: Real calendar-driven label
-                    Text(
-                        text = monthYearLabel,
-                        fontFamily = GoogleSans,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 12.sp,
-                        letterSpacing = 1.1.sp,
-                        color = CharcoalPrimary
-                    )
-                }
-
-                Box(
-                    modifier = Modifier
-                        .width(1.dp)
-                        .height(52.dp)
-                        .background(OutlineSubtle)
-                )
-
-                // Next Button (disabled if at current month/year)
-                val isAtPresent = run {
-                    val now = Calendar.getInstance()
-                    when (selectedPeriodMode) {
-                        0 -> displayedCalendar.get(Calendar.DAY_OF_YEAR) == now.get(Calendar.DAY_OF_YEAR) &&
-                                displayedCalendar.get(Calendar.YEAR) == now.get(Calendar.YEAR)
-                        1 -> displayedCalendar.get(Calendar.MONTH) == now.get(Calendar.MONTH) &&
-                                displayedCalendar.get(Calendar.YEAR) == now.get(Calendar.YEAR)
-                        else -> displayedCalendar.get(Calendar.YEAR) == now.get(Calendar.YEAR)
+                    // Prev Button
+                    Box(
+                        modifier = Modifier
+                            .size(52.dp)
+                            .clickable {
+                                // Fix 5: Navigate backward in time
+                                val prev = displayedCalendar.clone() as Calendar
+                                when (selectedPeriodMode) {
+                                    0 -> prev.add(Calendar.DAY_OF_YEAR, -1)
+                                    1 -> prev.add(Calendar.MONTH, -1)
+                                    2 -> prev.add(Calendar.YEAR, -1)
+                                }
+                                displayedCalendar = prev
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                            contentDescription = "Previous",
+                            tint = SecondaryGray,
+                            modifier = Modifier.size(24.dp)
+                        )
                     }
-                }
-                Box(
-                    modifier = Modifier
-                        .size(52.dp)
-                        .clickable(enabled = !isAtPresent) {
-                            // Fix 5: Navigate forward in time
-                            val next = displayedCalendar.clone() as Calendar
-                            when (selectedPeriodMode) {
-                                0 -> next.add(Calendar.DAY_OF_YEAR, 1)
-                                1 -> next.add(Calendar.MONTH, 1)
-                                2 -> next.add(Calendar.YEAR, 1)
-                            }
-                            displayedCalendar = next
-                        },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                        contentDescription = "Next",
-                        tint = SecondaryGray.copy(alpha = if (isAtPresent) 0.25f else 0.8f),
-                        modifier = Modifier.size(24.dp)
+
+                    Box(
+                        modifier = Modifier
+                            .width(1.dp)
+                            .height(52.dp)
+                            .background(OutlineSubtle)
                     )
+
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(52.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        // Fix 5: Real calendar-driven label
+                        Text(
+                            text = monthYearLabel,
+                            fontFamily = GoogleSans,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 12.sp,
+                            letterSpacing = 1.1.sp,
+                            color = CharcoalPrimary
+                        )
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .width(1.dp)
+                            .height(52.dp)
+                            .background(OutlineSubtle)
+                    )
+
+                    // Next Button (disabled if at current month/year)
+                    val isAtPresent = run {
+                        val now = Calendar.getInstance()
+                        when (selectedPeriodMode) {
+                            0 -> displayedCalendar.get(Calendar.DAY_OF_YEAR) == now.get(Calendar.DAY_OF_YEAR) &&
+                                    displayedCalendar.get(Calendar.YEAR) == now.get(Calendar.YEAR)
+                            1 -> displayedCalendar.get(Calendar.MONTH) == now.get(Calendar.MONTH) &&
+                                    displayedCalendar.get(Calendar.YEAR) == now.get(Calendar.YEAR)
+                            2 -> displayedCalendar.get(Calendar.YEAR) == now.get(Calendar.YEAR)
+                            else -> false
+                        }
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .size(52.dp)
+                            .clickable(enabled = !isAtPresent) {
+                                val next = displayedCalendar.clone() as Calendar
+                                when (selectedPeriodMode) {
+                                    0 -> next.add(Calendar.DAY_OF_YEAR, 1)
+                                    1 -> next.add(Calendar.MONTH, 1)
+                                    2 -> next.add(Calendar.YEAR, 1)
+                                }
+                                displayedCalendar = next
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                            contentDescription = "Next",
+                            tint = if (isAtPresent) OutlineSubtle else SecondaryGray,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
                 }
             }
         }
 
-        // 4. BOTTOM SECTION: Period mode + Rotary wheel + Stats summary
+        // 4. MIDDLE SECTION: Period mode + Rotary wheel + Stats overlay (takes remaining space)
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(155.dp),
+                .weight(1f),
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             // Left Column: Day / Month / Year mode buttons
             Column(
                 modifier = Modifier
                     .width(88.dp)
-                    .fillMaxSize(),
-                verticalArrangement = Arrangement.spacedBy(6.dp)
+                    .fillMaxHeight(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 listOf("Day", "Month", "Year").forEachIndexed { index, mode ->
                     val isSelected = index == selectedPeriodMode
@@ -311,7 +320,7 @@ fun StatsScreen(
             Card(
                 modifier = Modifier
                     .weight(1f)
-                    .fillMaxSize(),
+                    .fillMaxHeight(),
                 shape = RoundedCornerShape(22.dp),
                 colors = CardDefaults.cardColors(containerColor = SurfaceVariant),
                 elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
@@ -323,7 +332,7 @@ fun StatsScreen(
                     RotaryGaugeView(
                         angleDegrees = rotaryAngle,
                         onAngleChanged = { rotaryAngle = it },
-                        modifier = Modifier.size(135.dp)
+                        modifier = Modifier.size(150.dp)
                     )
                     // Fix 5: Show real total sessions count in the center of the gauge
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -347,23 +356,31 @@ fun StatsScreen(
 
         // Fix 5: Real lifetime stats summary row
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(68.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             StatSummaryCard(
                 label = "Today",
                 value = "${todayMinutes ?: 0} min",
-                modifier = Modifier.weight(1f)
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
             )
             StatSummaryCard(
                 label = "All Time",
                 value = "${(totalLifetimeMinutes ?: 0) / 60}h ${(totalLifetimeMinutes ?: 0) % 60}m",
-                modifier = Modifier.weight(1f)
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
             )
             StatSummaryCard(
                 label = "Streak",
                 value = "${viewModel.getStreak()} days",
-                modifier = Modifier.weight(1f)
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
             )
         }
     }

@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -108,7 +109,7 @@ fun RoutinesScreen(
             .background(ScreenBackground)
             .padding(horizontal = 16.dp, vertical = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.SpaceBetween
+        verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         // 1. TOP HEADER (Live Streaks + Parachute Count)
         TopHeaderBar(
@@ -121,7 +122,7 @@ fun RoutinesScreen(
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(150.dp),
+                .height(190.dp),
             shape = RoundedCornerShape(32.dp),
             colors = CardDefaults.cardColors(containerColor = SurfaceBright),
             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
@@ -129,7 +130,7 @@ fun RoutinesScreen(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                    .padding(horizontal = 16.dp, vertical = 16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
@@ -139,7 +140,7 @@ fun RoutinesScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     val availableWidth = maxWidth
-                    val block = (availableWidth / 33f).coerceIn(6.5.dp, 8.8.dp)
+                    val block = (availableWidth / 33f).coerceIn(7.dp, 9.5.dp)
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -178,7 +179,7 @@ fun RoutinesScreen(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(18.dp))
+                Spacer(modifier = Modifier.height(22.dp))
 
                 // 24-Hour Dotted Timeline Bar
                 Canvas(
@@ -214,11 +215,11 @@ fun RoutinesScreen(
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
-
         // 3. MIDDLE SECTION (Routine 1, Routine 2, Routine 3 Cards + Vertical Drag ON/OFF Switch)
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(105.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             // Routine 1
@@ -227,7 +228,9 @@ fun RoutinesScreen(
                 time = String.format(Locale.US, "%02d:%02d", routine1.startHour, routine1.startMinute),
                 isSelected = selectedRoutineIndex == 0,
                 onClick = { selectedRoutineIndex = 0 },
-                modifier = Modifier.weight(1f)
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
             )
 
             // Routine 2
@@ -236,7 +239,9 @@ fun RoutinesScreen(
                 time = String.format(Locale.US, "%02d:%02d", routine2.startHour, routine2.startMinute),
                 isSelected = selectedRoutineIndex == 1,
                 onClick = { selectedRoutineIndex = 1 },
-                modifier = Modifier.weight(1f)
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
             )
 
             // Routine 3 (100% Unlocked, Zero Locks!)
@@ -245,7 +250,9 @@ fun RoutinesScreen(
                 time = String.format(Locale.US, "%02d:%02d", routine3.startHour, routine3.startMinute),
                 isSelected = selectedRoutineIndex == 2,
                 onClick = { selectedRoutineIndex = 2 },
-                modifier = Modifier.weight(1f)
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
             )
 
             // Vertical Drag ON/OFF Switch (Drag UP = ON, Drag DOWN = OFF)
@@ -257,22 +264,27 @@ fun RoutinesScreen(
                         viewModel.setRoutineEnabled(currentRoutine, newEnabled)
                     }
                 },
-                modifier = Modifier.width(62.dp)
+                modifier = Modifier
+                    .width(62.dp)
+                    .fillMaxHeight()
             )
         }
 
         // 4. BOTTOM ROUTINE SCHEDULER CARD (Days of Week + Rulers)
         Card(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f),
             shape = RoundedCornerShape(26.dp),
             colors = CardDefaults.cardColors(containerColor = SurfaceVariant),
             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
         ) {
             Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 14.dp, vertical = 10.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+                    .fillMaxSize()
+                    .padding(horizontal = 14.dp, vertical = 12.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.SpaceEvenly
             ) {
                 // Days Row: S M T W T F S (Sun=0..Sat=6)
                 // Dragging UP = Applied / Selected, Dragging DOWN = Unapplied
@@ -300,8 +312,6 @@ fun RoutinesScreen(
                         )
                     }
                 }
-
-                Spacer(modifier = Modifier.height(6.dp))
 
                 // Duration & Status Subtitle (e.g. "Off · 1h" or "On · 7h 10m")
                 val durHours = durationMinutes / 60
@@ -334,8 +344,6 @@ fun RoutinesScreen(
                         color = if (isEnabled) AccentOrange else AccentOrange.copy(alpha = 0.7f)
                     )
                 }
-
-                Spacer(modifier = Modifier.height(6.dp))
 
                 // Dual Scrollable Time Rulers: START and END
                 Row(
@@ -385,7 +393,6 @@ fun RoutineTabCard(
 ) {
     Card(
         modifier = modifier
-            .height(92.dp)
             .clip(RoundedCornerShape(20.dp))
             .clickable { onClick() },
         shape = RoundedCornerShape(20.dp),
@@ -442,7 +449,6 @@ fun VerticalOnOffSwitch(
 
     Card(
         modifier = modifier
-            .height(92.dp)
             .clip(RoundedCornerShape(20.dp)),
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = Color.Transparent),
@@ -626,7 +632,7 @@ fun RoutineScrollableRuler(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(76.dp)
+                .height(84.dp)
                 .clip(RoundedCornerShape(16.dp))
                 .border(1.dp, OutlineSubtle, RoundedCornerShape(16.dp))
                 .background(Color.Transparent)

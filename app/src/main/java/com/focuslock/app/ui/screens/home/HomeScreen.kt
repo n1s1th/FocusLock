@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -89,7 +90,7 @@ fun HomeScreen(
             .background(ScreenBackground)
             .padding(horizontal = 16.dp, vertical = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.SpaceBetween
+        verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         // 1. TOP HEADER BAR
         TopHeaderBar(
@@ -149,7 +150,7 @@ fun HomeScreen(
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(165.dp),
+                .height(180.dp),
             shape = RoundedCornerShape(32.dp),
             colors = CardDefaults.cardColors(containerColor = SurfaceBright),
             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
@@ -161,7 +162,7 @@ fun HomeScreen(
                 DigitalTimerDisplay(
                     hours = hours,
                     minutes = minutes,
-                    blockSize = 15.dp,
+                    blockSize = 16.5.dp,
                     digitColor = CharcoalPrimary,
                     colonColor = SecondaryGray.copy(alpha = 0.7f)
                 )
@@ -170,14 +171,16 @@ fun HomeScreen(
 
         // 3. PRESETS GRID & VERTICAL SELECTOR (Balanced 2x2 grid matching ruler)
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f),
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             // Left Column: 2x2 Preset Cards
             Column(
                 modifier = Modifier
                     .weight(1f)
-                    .height(194.dp),
+                    .fillMaxHeight(),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 // Row 1: "15 Minutes" & "45 Minutes"
@@ -235,11 +238,11 @@ fun HomeScreen(
                 }
             }
 
-            // Right Column: Vertical Time Ruler Picker & Chevrons (matching 194.dp height)
+            // Right Column: Vertical Time Ruler Picker & Chevrons (matches presets height)
             VerticalRulerPicker(
                 selectedMinutes = selectedMinutes,
                 onMinutesChanged = { viewModel.setMinutes(it) },
-                modifier = Modifier.height(194.dp)
+                modifier = Modifier.fillMaxHeight()
             )
         }
 
