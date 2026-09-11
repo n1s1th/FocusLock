@@ -34,9 +34,11 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.focuslock.app.FocusLockApp
 import com.focuslock.app.ui.screens.bags.BagsScreen
 import com.focuslock.app.ui.screens.home.HomeScreen
 import com.focuslock.app.ui.screens.lock.LockScreenActivity
+import com.focuslock.app.ui.screens.permissions.PermissionsWizardScreen
 import com.focuslock.app.ui.screens.routines.RoutinesScreen
 import com.focuslock.app.ui.screens.settings.SettingsScreen
 import com.focuslock.app.ui.screens.stats.StatsScreen
@@ -50,11 +52,26 @@ import kotlinx.coroutines.launch
 fun AppNavigation() {
     val navController = rememberNavController()
     val context = LocalContext.current
+    val isOnboardingDone = FocusLockApp.instance.preferences.isOnboardingCompleted()
+    val startDest = if (isOnboardingDone) "main_pager" else Screen.PermissionsWizard.route
 
     NavHost(
         navController = navController,
-        startDestination = "main_pager"
+        startDestination = startDest
     ) {
+        composable(Screen.PermissionsWizard.route) {
+            PermissionsWizardScreen(
+                onFinished = {
+                    if (navController.previousBackStackEntry != null) {
+                        navController.popBackStack()
+                    } else {
+                        navController.navigate("main_pager") {
+                            popUpTo(Screen.PermissionsWizard.route) { inclusive = true }
+                        }
+                    }
+                }
+            )
+        }
         composable("main_pager") {
             MainPagerScreen(
                 onNavigateToLock = {
@@ -68,7 +85,10 @@ fun AppNavigation() {
         }
         composable(Screen.Settings.route) {
             SettingsScreen(
-                onBack = { navController.popBackStack() }
+                onBack = { navController.popBackStack() },
+                onOpenPermissionsWizard = {
+                    navController.navigate(Screen.PermissionsWizard.route)
+                }
             )
         }
     }

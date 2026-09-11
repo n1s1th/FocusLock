@@ -9,4 +9,5 @@ sealed class Screen(val route: String, val title: String, @DrawableRes val iconR
     object Routines : Screen("routines", "Routines", R.drawable.ic_navigation_control)
     object Stats : Screen("stats", "Analytics", R.drawable.ic_navigation_stats)
     object Settings : Screen("settings", "Settings", R.drawable.ic_account)
+    object PermissionsWizard : Screen("permissions_wizard", "Permissions", R.drawable.ic_account)
 }

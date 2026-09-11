@@ -68,7 +68,8 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 // Fix 10: Settings screen now uses app theme (light, clean) + TopHeaderBar for consistency
 @Composable
 fun SettingsScreen(
-    onBack: () -> Unit = {}
+    onBack: () -> Unit = {},
+    onOpenPermissionsWizard: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val app = FocusLockApp.instance
@@ -198,6 +199,16 @@ fun SettingsScreen(
 
         SectionLabel("SYSTEM PERMISSIONS & PERSISTENCE")
         Spacer(modifier = Modifier.height(10.dp))
+
+        SettingActionCard(
+            title = "Permissions Setup Wizard",
+            subtitle = "5-step guide for Notifications, Accessibility, Overlay, Battery & Stats",
+            icon = Icons.Default.Security,
+            actionLabel = "Start",
+            onClick = onOpenPermissionsWizard
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
 
         SettingActionCard(
             title = "Accessibility Service",
@@ -335,6 +346,7 @@ fun SettingActionCard(
     onClick: () -> Unit
 ) {
     Card(
+        onClick = onClick,
         colors = CardDefaults.cardColors(containerColor = SurfaceBright),
         shape = RoundedCornerShape(20.dp),
         modifier = Modifier.fillMaxWidth()

@@ -253,6 +253,12 @@ class AppPreferences(context: Context) {
         prefs.edit().putBoolean(KEY_HAPTICS_ENABLED, enabled).apply()
     }
 
+    fun isOnboardingCompleted(): Boolean = prefs.getBoolean(KEY_ONBOARDING_COMPLETED, false)
+
+    fun setOnboardingCompleted(completed: Boolean) {
+        prefs.edit().putBoolean(KEY_ONBOARDING_COMPLETED, completed).apply()
+    }
+
     private fun recordStreakActivity() {
         val today = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
         val lastDate = getLastActiveDate()
@@ -299,6 +305,7 @@ class AppPreferences(context: Context) {
         private const val KEY_HAPTICS_ENABLED = "haptics_enabled"
         private const val KEY_CURRENT_STREAK = "current_streak"
         private const val KEY_LAST_ACTIVE_DATE = "last_active_date"
+        private const val KEY_ONBOARDING_COMPLETED = "onboarding_completed"
 
         // Parachute preferences
         private const val KEY_PARACHUTE_WEEK_START = "parachute_week_start"
