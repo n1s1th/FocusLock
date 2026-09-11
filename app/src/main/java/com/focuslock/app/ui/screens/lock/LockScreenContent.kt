@@ -82,6 +82,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import androidx.core.graphics.drawable.toBitmap
 import com.focuslock.app.FocusLockApp
 import com.focuslock.app.R
@@ -271,15 +272,39 @@ fun LockScreenContent(
                     while (true) {
                         val event = awaitPointerEvent(PointerEventPass.Initial)
                         if (event.changes.any { it.pressed }) {
-                            registerUserInteraction()
+                            lastInteractionTime = System.currentTimeMillis()
                         }
                     }
                 }
             }
             .statusBarsPadding()
             .navigationBarsPadding()
-            .padding(horizontal = 16.dp, vertical = 6.dp)
+            .padding(horizontal = 16.dp, vertical = 8.dp)
     ) {
+        // Ambient Wake-Up Interceptor Overlay
+        // When in ambient mode, this full-screen top-layer overlay consumes the blind touch
+        // completely, waking the screen without allowing ANY touch event to pass through
+        // to underlying allowed apps, dialer, parachute, or slide-to-exit.
+        if (isAmbientMode) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .zIndex(999f)
+                    .pointerInput(Unit) {
+                        awaitPointerEventScope {
+                            while (true) {
+                                val event = awaitPointerEvent(PointerEventPass.Initial)
+                                event.changes.forEach { it.consume() }
+                                if (event.changes.any { it.pressed }) {
+                                    lastInteractionTime = System.currentTimeMillis()
+                                    isAmbientMode = false
+                                }
+                            }
+                        }
+                    }
+            )
+        }
+
         val totalH = maxHeight
         val clockCardHeight = (totalH * 0.245f).coerceIn(175.dp, 245.dp)
         val clockBlockSize = (clockCardHeight * 0.098f).coerceIn(17.dp, 24.dp)
@@ -299,9 +324,11 @@ fun LockScreenContent(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.SpaceBetween
         ) {
-            // 1. TOP LOGO
+            // 1. TOP LOGO (With comfortable top margin)
             BlockLogoView(
-                modifier = Modifier.graphicsLayer { alpha = ambientAlpha },
+                modifier = Modifier
+                    .padding(top = 16.dp, bottom = 4.dp)
+                    .graphicsLayer { alpha = ambientAlpha },
                 pixelSize = 4.2.dp,
                 color = Color.White,
                 pulseColor = AccentOrange
@@ -603,6 +630,7 @@ fun LockScreenContent(
                     .fillMaxWidth()
                     .height(sliderHeight)
                     .graphicsLayer { alpha = ambientAlpha },
+                enabled = !isAmbientMode,
                 onTriggerExit = {
                     if (totalParachutes > 0) {
                         showEmergencyDialog = true
@@ -776,6 +804,7 @@ fun LockScreenContent(
 @Composable
 fun SlideToExitTrack(
     modifier: Modifier = Modifier,
+    enabled: Boolean = true,
     onTriggerExit: () -> Unit
 ) {
     val view = LocalView.current
@@ -834,7 +863,8 @@ fun SlideToExitTrack(
                 .height(handleHeight)
                 .clip(RoundedCornerShape(24.dp))
                 .background(CardAccentHandle)
-                .pointerInput(Unit) {
+                .pointerInput(enabled) {
+                    if (!enabled) return@pointerInput
                     detectHorizontalDragGestures(
                         onDragStart = {
                             isDragging = true

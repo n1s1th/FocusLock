@@ -84,8 +84,9 @@ fun DoneScreenContent(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.SpaceBetween
         ) {
-            // 1. TOP LOGO
+            // 1. TOP LOGO (With comfortable top margin)
             BlockLogoView(
+                modifier = Modifier.padding(top = 16.dp, bottom = 4.dp),
                 pixelSize = 4.2.dp,
                 color = Color.White,
                 pulseColor = AccentOrange
