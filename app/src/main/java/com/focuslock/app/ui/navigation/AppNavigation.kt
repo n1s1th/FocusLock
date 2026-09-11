@@ -96,7 +96,7 @@ fun MainPagerScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .navigationBarsPadding()
-                    .padding(bottom = 12.dp),
+                    .padding(top = 10.dp, bottom = 12.dp),
                 contentAlignment = Alignment.Center
             ) {
                 // Floating Pill Navigation Bar
