@@ -48,6 +48,7 @@ import com.focuslock.app.service.FocusAccessibilityService
 import com.focuslock.app.ui.screens.home.components.BlockLogoView
 import com.focuslock.app.ui.screens.home.components.DigitalTimerDisplay
 import com.focuslock.app.ui.screens.home.components.SlideToStart
+import com.focuslock.app.ui.screens.home.components.TopHeaderBar
 import com.focuslock.app.ui.screens.home.components.VerticalRulerPicker
 import com.focuslock.app.ui.theme.AccentOrange
 import com.focuslock.app.ui.theme.CharcoalPrimary
@@ -86,158 +87,57 @@ fun HomeScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(ScreenBackground)
-            .padding(horizontal = 16.dp)
-            .verticalScroll(rememberScrollState()),
-        horizontalAlignment = Alignment.CenterHorizontally
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.SpaceBetween
     ) {
-        Spacer(modifier = Modifier.height(14.dp))
+        // 1. TOP HEADER BAR
+        TopHeaderBar(
+            streakCount = viewModel.getStreak(),
+            parachuteCount = parachuteCount,
+            onProfileClick = onNavigateToSettings
+        )
 
-        // 1. TOP HEADER (Fix 1: live parachute count, fix streak floor removed)
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // Left Pill: Streak count
-            Row(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(SurfaceBright)
-                    .padding(horizontal = 14.dp, vertical = 9.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(10.dp)
-                        .background(SecondaryGray)
-                )
-                Spacer(modifier = Modifier.width(7.dp))
-                Text(
-                    // Fix 1a: Show real streak (no coerceAtLeast minimum)
-                    text = "${viewModel.getStreak()}",
-                    fontFamily = GoogleSans,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 15.sp,
-                    color = CharcoalPrimary
-                )
-            }
-
-            // Center Wordmark / Logo
-            BlockLogoView(
-                pixelSize = 4.5.dp,
-                color = CharcoalPrimary,
-                pulseColor = AccentOrange
-            )
-
-            // Right Pill: Live parachute count + avatar
-            Row(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(SurfaceBright)
-                    .padding(start = 8.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Parachute Circle
-                Box(
-                    modifier = Modifier
-                        .size(24.dp)
-                        .clip(CircleShape)
-                        .background(CharcoalPrimary),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_parachute),
-                        contentDescription = "Parachutes",
-                        tint = SurfaceBright,
-                        modifier = Modifier
-                            .size(14.dp)
-                            .rotate(-25f)
-                    )
-                }
-
-                Spacer(modifier = Modifier.width(6.dp))
-
-                // Fix 1b: Show real parachute count from StateFlow
-                Text(
-                    text = "$parachuteCount",
-                    fontFamily = GoogleSans,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 14.sp,
-                    color = CharcoalPrimary
-                )
-
-                Spacer(modifier = Modifier.width(8.dp))
-
-                // Vertical Divider Line
-                Box(
-                    modifier = Modifier
-                        .width(1.dp)
-                        .height(18.dp)
-                        .background(OutlineSubtle)
-                )
-
-                Spacer(modifier = Modifier.width(4.dp))
-
-                // Avatar Profile Button
-                Box(
-                    modifier = Modifier
-                        .size(32.dp)
-                        .clip(CircleShape)
-                        .background(CharcoalPrimary)
-                        .clickable { onNavigateToSettings() },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_account),
-                        contentDescription = "Profile",
-                        tint = SurfaceBright,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-            }
-        }
-
-        // Accessibility Permission Notice (if disabled)
+        // Accessibility Permission Notice (compact if disabled)
         if (!isAccessibilityOn) {
-            Spacer(modifier = Modifier.height(12.dp))
             Card(
                 colors = CardDefaults.cardColors(containerColor = SurfaceBright),
-                shape = RoundedCornerShape(20.dp),
+                shape = RoundedCornerShape(16.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Row(
-                    modifier = Modifier.padding(14.dp),
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
                         imageVector = Icons.Default.WarningAmber,
                         contentDescription = "Warning",
-                        tint = AccentOrange
+                        tint = AccentOrange,
+                        modifier = Modifier.size(20.dp)
                     )
-                    Spacer(modifier = Modifier.width(10.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = "Permission Required",
                             fontFamily = GoogleSans,
                             fontWeight = FontWeight.Bold,
                             color = CharcoalPrimary,
-                            fontSize = 13.sp
+                            fontSize = 12.sp
                         )
                         Text(
-                            text = "Enable Accessibility to activate screen blocking.",
+                            text = "Enable Accessibility for screen blocking.",
                             fontFamily = GoogleSans,
                             color = SecondaryGray,
-                            fontSize = 11.sp
+                            fontSize = 10.sp
                         )
                     }
-                    Spacer(modifier = Modifier.width(6.dp))
                     Button(
                         onClick = {
                             context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = CharcoalPrimary),
-                        shape = RoundedCornerShape(12.dp),
-                        contentPadding = ButtonDefaults.TextButtonContentPadding
+                        shape = RoundedCornerShape(10.dp),
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp, vertical = 4.dp)
                     ) {
                         Text("Enable", color = SurfaceBright, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     }
@@ -245,14 +145,12 @@ fun HomeScreen(
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // 2. MAIN TIMER CARD
+        // 2. MAIN TIMER CARD (Fixed proportion, fits cleanly in viewport)
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(205.dp),
-            shape = RoundedCornerShape(38.dp),
+                .height(165.dp),
+            shape = RoundedCornerShape(32.dp),
             colors = CardDefaults.cardColors(containerColor = SurfaceBright),
             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
         ) {
@@ -263,28 +161,30 @@ fun HomeScreen(
                 DigitalTimerDisplay(
                     hours = hours,
                     minutes = minutes,
-                    blockSize = 17.5.dp,
+                    blockSize = 15.dp,
                     digitColor = CharcoalPrimary,
                     colonColor = SecondaryGray.copy(alpha = 0.7f)
                 )
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // 3. PRESETS GRID & VERTICAL SELECTOR
+        // 3. PRESETS GRID & VERTICAL SELECTOR (Balanced 2x2 grid matching ruler)
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             // Left Column: 2x2 Preset Cards
             Column(
-                modifier = Modifier.weight(1f),
+                modifier = Modifier
+                    .weight(1f)
+                    .height(194.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 // Row 1: "15 Minutes" & "45 Minutes"
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     PresetCard(
@@ -294,7 +194,7 @@ fun HomeScreen(
                         onClick = { viewModel.setMinutes(15) },
                         modifier = Modifier
                             .weight(1f)
-                            .height(108.dp)
+                            .fillMaxSize()
                     )
                     PresetCard(
                         value = "45",
@@ -303,13 +203,15 @@ fun HomeScreen(
                         onClick = { viewModel.setMinutes(45) },
                         modifier = Modifier
                             .weight(1f)
-                            .height(108.dp)
+                            .fillMaxSize()
                     )
                 }
 
-                // Row 2: "3 Hours" & "12 Hours" (Fix 2: removed lock icon, now functional preset)
+                // Row 2: "3 Hours" & "12 Hours"
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     PresetCard(
@@ -319,9 +221,8 @@ fun HomeScreen(
                         onClick = { viewModel.setMinutes(180) },
                         modifier = Modifier
                             .weight(1f)
-                            .height(182.dp)
+                            .fillMaxSize()
                     )
-                    // Fix 2: No more lock icon — this is now a fully interactive 12-hour preset
                     PresetCard(
                         value = "12",
                         label = "Hours",
@@ -329,19 +230,18 @@ fun HomeScreen(
                         onClick = { viewModel.setMinutes(720) },
                         modifier = Modifier
                             .weight(1f)
-                            .height(182.dp)
+                            .fillMaxSize()
                     )
                 }
             }
 
-            // Right Column: Vertical Time Ruler Picker & Chevrons
+            // Right Column: Vertical Time Ruler Picker & Chevrons (matching 194.dp height)
             VerticalRulerPicker(
                 selectedMinutes = selectedMinutes,
-                onMinutesChanged = { viewModel.setMinutes(it) }
+                onMinutesChanged = { viewModel.setMinutes(it) },
+                modifier = Modifier.height(194.dp)
             )
         }
-
-        Spacer(modifier = Modifier.height(16.dp))
 
         // 4. SLIDE TO START
         SlideToStart(
@@ -351,8 +251,6 @@ fun HomeScreen(
             },
             text = "SLIDE TO START"
         )
-
-        Spacer(modifier = Modifier.height(32.dp))
     }
 }
 
@@ -385,15 +283,15 @@ fun PresetCard(
                 text = value,
                 fontFamily = GoogleSans,
                 fontWeight = FontWeight.Bold,
-                fontSize = 34.sp,
+                fontSize = 28.sp,
                 color = if (isSelected) SurfaceBright else CharcoalPrimary
             )
-            Spacer(modifier = Modifier.height(2.dp))
+            Spacer(modifier = Modifier.height(1.dp))
             Text(
                 text = label,
                 fontFamily = GoogleSans,
                 fontWeight = FontWeight.Bold,
-                fontSize = 13.sp,
+                fontSize = 12.sp,
                 color = if (isSelected) SurfaceBright.copy(alpha = 0.7f) else SecondaryGray
             )
         }

@@ -7,6 +7,7 @@ import android.os.Build
 import android.os.PowerManager
 import android.provider.Settings
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -62,9 +63,13 @@ import com.focuslock.app.ui.theme.SecondaryMuted
 import com.focuslock.app.ui.theme.SurfaceBright
 import com.focuslock.app.ui.theme.SurfaceVariant
 
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+
 // Fix 10: Settings screen now uses app theme (light, clean) + TopHeaderBar for consistency
 @Composable
-fun SettingsScreen() {
+fun SettingsScreen(
+    onBack: () -> Unit = {}
+) {
     val context = LocalContext.current
     val app = FocusLockApp.instance
 
@@ -83,14 +88,55 @@ fun SettingsScreen() {
     ) {
         Spacer(modifier = Modifier.height(14.dp))
 
-        // Fix 10: Add consistent TopHeaderBar like other screens
-        TopHeaderBar(
-            streakCount = app.preferences.getCurrentStreak(),
-            parachuteCount = parachuteCount,
-            onProfileClick = {}
-        )
+        // Top Header Bar with Back Button
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(SurfaceBright)
+                    .clickable { onBack() },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Back",
+                    tint = CharcoalPrimary,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
 
-        Spacer(modifier = Modifier.height(24.dp))
+            Text(
+                text = "Settings",
+                fontFamily = GoogleSans,
+                fontWeight = FontWeight.Bold,
+                fontSize = 16.sp,
+                color = CharcoalPrimary
+            )
+
+            // Right Pill: Streak count
+            Row(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(SurfaceBright)
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "${app.preferences.getCurrentStreak()}d",
+                    fontFamily = GoogleSans,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 13.sp,
+                    color = CharcoalPrimary
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(20.dp))
 
         Text(
             text = "Settings & Protection",

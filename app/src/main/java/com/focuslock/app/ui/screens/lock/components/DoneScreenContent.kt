@@ -62,33 +62,30 @@ fun DoneScreenContent(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.Black)
-            .padding(horizontal = 16.dp, vertical = 20.dp)
+            .padding(horizontal = 16.dp, vertical = 12.dp)
     ) {
         Column(
             modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState()),
+                .fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.SpaceBetween
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Spacer(modifier = Modifier.height(10.dp))
-
                 // 1. TOP LOGO
                 BlockLogoView(
-                    pixelSize = 4.8.dp,
+                    pixelSize = 4.2.dp,
                     color = Color.White,
                     pulseColor = AccentOrange
                 )
 
-                Spacer(modifier = Modifier.height(20.dp))
+                Spacer(modifier = Modifier.height(14.dp))
 
                 // 2. DONE PIXEL ART CARD
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(156.dp),
-                    shape = RoundedCornerShape(28.dp),
+                        .height(135.dp),
+                    shape = RoundedCornerShape(26.dp),
                     colors = CardDefaults.cardColors(containerColor = CardBackgroundDark),
                     elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                 ) {
@@ -97,32 +94,32 @@ fun DoneScreenContent(
                         contentAlignment = Alignment.Center
                     ) {
                         DonePixelArtView(
-                            blockSize = 13.5.dp,
+                            blockSize = 12.dp,
                             color = Color.White
                         )
                     }
                 }
 
-                Spacer(modifier = Modifier.height(14.dp))
+                Spacer(modifier = Modifier.height(10.dp))
 
                 // 3. STATS ROW (MIN · SESSION | MIN · TODAY)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     // Session Minutes Card
                     Card(
                         modifier = Modifier
                             .weight(1f)
-                            .height(168.dp),
-                        shape = RoundedCornerShape(26.dp),
+                            .height(140.dp),
+                        shape = RoundedCornerShape(22.dp),
                         colors = CardDefaults.cardColors(containerColor = CardBackgroundDark),
                         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                     ) {
                         Column(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .padding(vertical = 20.dp),
+                                .padding(vertical = 14.dp),
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.Center
                         ) {
@@ -130,17 +127,17 @@ fun DoneScreenContent(
                                 text = "$sessionMinutes",
                                 fontFamily = GoogleSans,
                                 fontWeight = FontWeight.Bold,
-                                fontSize = 42.sp,
+                                fontSize = 36.sp,
                                 color = Color.White
                             )
-                            Spacer(modifier = Modifier.height(12.dp))
+                            Spacer(modifier = Modifier.height(8.dp))
                             Text(
                                 text = "MIN · SESSION",
                                 fontFamily = GoogleSans,
                                 fontWeight = FontWeight.Bold,
-                                fontSize = 11.sp,
+                                fontSize = 10.sp,
                                 color = CardMutedText,
-                                letterSpacing = 1.5.sp
+                                letterSpacing = 1.2.sp
                             )
                         }
                     }
@@ -149,15 +146,15 @@ fun DoneScreenContent(
                     Card(
                         modifier = Modifier
                             .weight(1f)
-                            .height(168.dp),
-                        shape = RoundedCornerShape(26.dp),
+                            .height(140.dp),
+                        shape = RoundedCornerShape(22.dp),
                         colors = CardDefaults.cardColors(containerColor = CardBackgroundDark),
                         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                     ) {
                         Column(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .padding(vertical = 20.dp),
+                                .padding(vertical = 14.dp),
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.Center
                         ) {
@@ -165,30 +162,30 @@ fun DoneScreenContent(
                                 text = "$todayMinutes",
                                 fontFamily = GoogleSans,
                                 fontWeight = FontWeight.Bold,
-                                fontSize = 42.sp,
+                                fontSize = 36.sp,
                                 color = Color.White
                             )
-                            Spacer(modifier = Modifier.height(12.dp))
+                            Spacer(modifier = Modifier.height(8.dp))
                             Text(
                                 text = "MIN · TODAY",
                                 fontFamily = GoogleSans,
                                 fontWeight = FontWeight.Bold,
-                                fontSize = 11.sp,
+                                fontSize = 10.sp,
                                 color = CardMutedText,
-                                letterSpacing = 1.5.sp
+                                letterSpacing = 1.2.sp
                             )
                         }
                     }
                 }
 
-                Spacer(modifier = Modifier.height(14.dp))
+                Spacer(modifier = Modifier.height(10.dp))
 
                 // 4. DAY STREAK & WEEKDAYS CARD
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(98.dp),
-                    shape = RoundedCornerShape(26.dp),
+                        .height(84.dp),
+                    shape = RoundedCornerShape(22.dp),
                     colors = CardDefaults.cardColors(containerColor = CardBackgroundDark),
                     elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                 ) {

@@ -271,33 +271,28 @@ fun LockScreenContent(
     ) {
         Column(
             modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState()),
+                .fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+            verticalArrangement = Arrangement.SpaceBetween
         ) {
-            Spacer(modifier = Modifier.height(10.dp))
-
             // 1. TOP LOGO
             BlockLogoView(
                 modifier = Modifier.graphicsLayer { alpha = ambientAlpha },
-                pixelSize = 4.8.dp,
+                pixelSize = 4.2.dp,
                 color = Color.White,
                 pulseColor = AccentOrange
             )
 
-            Spacer(modifier = Modifier.height(14.dp))
-
-            // 2. BIG DIGITAL TIMER CARD (HH:MM / MM:SS) - Sized generously
+            // 2. BIG DIGITAL TIMER CARD (HH:MM / MM:SS)
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(172.dp)
+                    .height(145.dp)
                     .graphicsLayer {
                         translationX = animFloatX
                         translationY = animFloatY
                     },
-                shape = RoundedCornerShape(28.dp),
+                shape = RoundedCornerShape(26.dp),
                 colors = CardDefaults.cardColors(containerColor = timerCardBg),
                 border = timerBorder,
                 elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
@@ -309,35 +304,33 @@ fun LockScreenContent(
                     DigitalTimerDisplay(
                         hours = displayHours,
                         minutes = displayMinutes,
-                        blockSize = 18.dp,
+                        blockSize = 15.dp,
                         digitColor = timerDigitColor,
                         colonColor = timerColonColor
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // 3. MIDDLE 2-COLUMN SECTION (Total height: 292dp)
+            // 3. MIDDLE 2-COLUMN SECTION (Total height: 233dp)
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                // LEFT COLUMN (Total height: 184 + 8 + 46 + 8 + 46 = 292.dp)
+                // LEFT COLUMN (Total height: 145 + 6 + 38 + 6 + 38 = 233.dp)
                 Column(
                     modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     // Seconds Tile - Floating in ambient mode
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(184.dp)
+                            .height(145.dp)
                             .graphicsLayer {
                                 translationX = animFloatX
                                 translationY = animFloatY
                             },
-                        shape = RoundedCornerShape(26.dp),
+                        shape = RoundedCornerShape(22.dp),
                         colors = CardDefaults.cardColors(containerColor = timerCardBg),
                         border = timerBorder,
                         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
@@ -345,27 +338,27 @@ fun LockScreenContent(
                         Column(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .padding(vertical = 18.dp),
+                                .padding(vertical = 12.dp),
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.Center
                         ) {
                             Row(
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 val s1 = displaySeconds / 10
                                 val s2 = displaySeconds % 10
-                                SquareDigit(digit = s1, blockSize = 16.dp, color = timerDigitColor)
-                                SquareDigit(digit = s2, blockSize = 16.dp, color = timerDigitColor)
+                                SquareDigit(digit = s1, blockSize = 13.5.dp, color = timerDigitColor)
+                                SquareDigit(digit = s2, blockSize = 13.5.dp, color = timerDigitColor)
                             }
-                            Spacer(modifier = Modifier.height(12.dp))
+                            Spacer(modifier = Modifier.height(8.dp))
                             Text(
                                 text = "SEC",
                                 fontFamily = GoogleSans,
                                 fontWeight = FontWeight.Bold,
-                                fontSize = 13.sp,
+                                fontSize = 11.sp,
                                 color = if (isAmbientMode) Color(0xFF4A4744) else CardMutedText,
-                                letterSpacing = 2.sp
+                                letterSpacing = 1.5.sp
                             )
                         }
                     }
@@ -374,16 +367,16 @@ fun LockScreenContent(
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(46.dp)
+                            .height(38.dp)
                             .graphicsLayer { alpha = ambientAlpha },
-                        shape = RoundedCornerShape(23.dp),
+                        shape = RoundedCornerShape(19.dp),
                         colors = CardDefaults.cardColors(containerColor = CardBackgroundDark),
                         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                     ) {
                         Row(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .padding(horizontal = 14.dp),
+                                .padding(horizontal = 12.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.Center
                         ) {
@@ -391,16 +384,16 @@ fun LockScreenContent(
                                 text = "ENDS",
                                 fontFamily = GoogleSans,
                                 fontWeight = FontWeight.Bold,
-                                fontSize = 10.sp,
+                                fontSize = 9.sp,
                                 color = CardMutedText,
                                 letterSpacing = 1.sp
                             )
-                            Spacer(modifier = Modifier.width(8.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
                             Text(
                                 text = formattedEndTime,
                                 fontFamily = GoogleSans,
                                 fontWeight = FontWeight.Bold,
-                                fontSize = 14.sp,
+                                fontSize = 12.sp,
                                 color = Color.White
                             )
                         }
@@ -410,22 +403,22 @@ fun LockScreenContent(
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(46.dp)
+                            .height(38.dp)
                             .graphicsLayer { alpha = ambientAlpha },
-                        shape = RoundedCornerShape(23.dp),
+                        shape = RoundedCornerShape(19.dp),
                         colors = CardDefaults.cardColors(containerColor = CardBackgroundDark),
                         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                     ) {
                         Row(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .padding(horizontal = 14.dp),
+                                .padding(horizontal = 12.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.Center
                         ) {
                             Box(
                                 modifier = Modifier
-                                    .size(24.dp)
+                                    .size(20.dp)
                                     .clip(CircleShape)
                                     .background(CardAccentHandle),
                                 contentAlignment = Alignment.Center
@@ -435,35 +428,35 @@ fun LockScreenContent(
                                     contentDescription = "Parachutes",
                                     tint = Color.White,
                                     modifier = Modifier
-                                        .size(13.dp)
+                                        .size(11.dp)
                                         .rotate(-25f)
                                 )
                             }
-                            Spacer(modifier = Modifier.width(10.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
                             Text(
                                 text = "$totalParachutes",
                                 fontFamily = GoogleSans,
                                 fontWeight = FontWeight.Bold,
-                                fontSize = 16.sp,
+                                fontSize = 14.sp,
                                 color = Color.White
                             )
                         }
                     }
                 }
 
-                // RIGHT COLUMN (Total height: 184 + 8 + 100 = 292.dp)
+                // RIGHT COLUMN (Total height: 145 + 6 + 82 = 233.dp)
                 Column(
                     modifier = Modifier
                         .weight(1f)
                         .graphicsLayer { alpha = ambientAlpha },
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     // +15 min Extension Card
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(184.dp)
-                            .clip(RoundedCornerShape(26.dp))
+                            .height(145.dp)
+                            .clip(RoundedCornerShape(22.dp))
                             .clickable {
                                 if (!isAmbientMode) {
                                     val currentEnd = app.preferences.getSessionEndTimeMillis()
@@ -477,14 +470,14 @@ fun LockScreenContent(
                                     )
                                 }
                             },
-                        shape = RoundedCornerShape(26.dp),
+                        shape = RoundedCornerShape(22.dp),
                         colors = CardDefaults.cardColors(containerColor = CardBackgroundDark),
                         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                     ) {
                         Column(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .padding(vertical = 18.dp),
+                                .padding(vertical = 12.dp),
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.Center
                         ) {
@@ -492,25 +485,25 @@ fun LockScreenContent(
                                 text = "+15",
                                 fontFamily = GoogleSans,
                                 fontWeight = FontWeight.Bold,
-                                fontSize = 38.sp,
+                                fontSize = 32.sp,
                                 color = Color.White
                             )
                             Text(
                                 text = "min",
                                 fontFamily = GoogleSans,
                                 fontWeight = FontWeight.Medium,
-                                fontSize = 13.sp,
+                                fontSize = 12.sp,
                                 color = CardMutedText
                             )
-                            Spacer(modifier = Modifier.height(14.dp))
+                            Spacer(modifier = Modifier.height(10.dp))
                             Row(
-                                horizontalArrangement = Arrangement.spacedBy(5.dp),
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 repeat(4) {
                                     Box(
                                         modifier = Modifier
-                                            .size(8.dp)
+                                            .size(7.dp)
                                             .background(CardAccentHandle)
                                     )
                                 }
@@ -522,48 +515,48 @@ fun LockScreenContent(
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(100.dp),
-                        shape = RoundedCornerShape(26.dp),
+                            .height(82.dp),
+                        shape = RoundedCornerShape(22.dp),
                         colors = CardDefaults.cardColors(containerColor = CardBackgroundDark),
                         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                     ) {
                         Column(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .padding(vertical = 12.dp),
+                                .padding(vertical = 8.dp),
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.Center
                         ) {
                             Row(
-                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                horizontalArrangement = Arrangement.spacedBy(3.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 repeat(4) {
                                     Box(
                                         modifier = Modifier
-                                            .size(4.dp)
+                                            .size(3.5.dp)
                                             .background(CardMutedText)
                                     )
                                 }
                             }
-                            Spacer(modifier = Modifier.height(6.dp))
+                            Spacer(modifier = Modifier.height(4.dp))
                             Text(
                                 text = "RAIN",
                                 fontFamily = GoogleSans,
                                 fontWeight = FontWeight.Bold,
-                                fontSize = 12.sp,
+                                fontSize = 11.sp,
                                 color = CardMutedText,
-                                letterSpacing = 2.sp
+                                letterSpacing = 1.5.sp
                             )
-                            Spacer(modifier = Modifier.height(6.dp))
+                            Spacer(modifier = Modifier.height(4.dp))
                             Row(
-                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                horizontalArrangement = Arrangement.spacedBy(3.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 repeat(4) {
                                     Box(
                                         modifier = Modifier
-                                            .size(4.dp)
+                                            .size(3.5.dp)
                                             .background(CardMutedText)
                                     )
                                 }
@@ -573,9 +566,7 @@ fun LockScreenContent(
                 }
             }
 
-            Spacer(modifier = Modifier.height(14.dp))
-
-            // 4. SLIDE TO EXIT (Directly below parachute & rain cards, with only 14dp gap!)
+            // 4. SLIDE TO EXIT (Smooth, perfectly aligned)
             SlideToExitTrack(
                 modifier = Modifier.graphicsLayer { alpha = ambientAlpha },
                 onTriggerExit = {
@@ -586,8 +577,6 @@ fun LockScreenContent(
                     }
                 }
             )
-
-            Spacer(modifier = Modifier.height(12.dp))
 
             // 5. BOTTOM ALLOWED APPS DOCK (All 6 slots) & EMERGENCY DIALER
             Row(
@@ -601,10 +590,10 @@ fun LockScreenContent(
                 Row(
                     modifier = Modifier
                         .weight(1f)
-                        .height(52.dp)
-                        .clip(RoundedCornerShape(26.dp))
+                        .height(46.dp)
+                        .clip(RoundedCornerShape(23.dp))
                         .background(CardBackgroundDark)
-                        .padding(horizontal = 8.dp),
+                        .padding(horizontal = 6.dp),
                     horizontalArrangement = Arrangement.SpaceEvenly,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -633,7 +622,7 @@ fun LockScreenContent(
                 // White Emergency Phone Button
                 Box(
                     modifier = Modifier
-                        .size(52.dp)
+                        .size(46.dp)
                         .clip(CircleShape)
                         .background(Color.White)
                         .clickable {
@@ -648,12 +637,10 @@ fun LockScreenContent(
                         painter = painterResource(id = R.drawable.ic_phone),
                         contentDescription = "Emergency Phone",
                         tint = Color.Black,
-                        modifier = Modifier.size(22.dp)
+                        modifier = Modifier.size(20.dp)
                     )
                 }
             }
-
-            Spacer(modifier = Modifier.height(14.dp))
         }
 
         // Parachute Emergency Confirmation Dialog

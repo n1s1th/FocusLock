@@ -106,12 +106,10 @@ fun RoutinesScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(ScreenBackground)
-            .padding(horizontal = 16.dp)
-            .verticalScroll(rememberScrollState()),
-        horizontalAlignment = Alignment.CenterHorizontally
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.SpaceBetween
     ) {
-        Spacer(modifier = Modifier.height(14.dp))
-
         // 1. TOP HEADER (Live Streaks + Parachute Count)
         TopHeaderBar(
             streakCount = viewModel.currentStreak,
@@ -119,21 +117,19 @@ fun RoutinesScreen(
             onProfileClick = onNavigateToSettings
         )
 
-        Spacer(modifier = Modifier.height(16.dp))
-
         // 2. TOP WHITE CARD (Dual Digital Clocks + 24h Timeline Progress Bar)
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(190.dp),
-            shape = RoundedCornerShape(38.dp),
+                .height(150.dp),
+            shape = RoundedCornerShape(32.dp),
             colors = CardDefaults.cardColors(containerColor = SurfaceBright),
             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(horizontal = 16.dp, vertical = 22.dp),
+                    .padding(horizontal = 16.dp, vertical = 14.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
@@ -143,7 +139,7 @@ fun RoutinesScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     val availableWidth = maxWidth
-                    val block = (availableWidth / 33f).coerceIn(6.5.dp, 9.2.dp)
+                    val block = (availableWidth / 33f).coerceIn(6.5.dp, 8.8.dp)
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -182,7 +178,7 @@ fun RoutinesScreen(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(26.dp))
+                Spacer(modifier = Modifier.height(18.dp))
 
                 // 24-Hour Dotted Timeline Bar
                 Canvas(
@@ -265,19 +261,17 @@ fun RoutinesScreen(
             )
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
-
         // 4. BOTTOM ROUTINE SCHEDULER CARD (Days of Week + Rulers)
         Card(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(28.dp),
+            shape = RoundedCornerShape(26.dp),
             colors = CardDefaults.cardColors(containerColor = SurfaceVariant),
             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp),
+                    .padding(horizontal = 14.dp, vertical = 10.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 // Days Row: S M T W T F S (Sun=0..Sat=6)
@@ -307,7 +301,7 @@ fun RoutinesScreen(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(18.dp))
+                Spacer(modifier = Modifier.height(6.dp))
 
                 // Duration & Status Subtitle (e.g. "Off · 1h" or "On · 7h 10m")
                 val durHours = durationMinutes / 60
@@ -322,26 +316,26 @@ fun RoutinesScreen(
                     Text(
                         text = if (isEnabled) "On" else "Off",
                         fontFamily = GoogleSans,
-                        fontSize = 13.sp,
+                        fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
                         color = if (isEnabled) AccentOrange else SecondaryGray
                     )
                     Text(
                         text = " · ",
                         fontFamily = GoogleSans,
-                        fontSize = 13.sp,
+                        fontSize = 12.sp,
                         color = SecondaryGray
                     )
                     Text(
                         text = durationFormatted,
                         fontFamily = GoogleSans,
                         fontWeight = FontWeight.Bold,
-                        fontSize = 13.sp,
+                        fontSize = 12.sp,
                         color = if (isEnabled) AccentOrange else AccentOrange.copy(alpha = 0.7f)
                     )
                 }
 
-                Spacer(modifier = Modifier.height(14.dp))
+                Spacer(modifier = Modifier.height(6.dp))
 
                 // Dual Scrollable Time Rulers: START and END
                 Row(
@@ -378,8 +372,6 @@ fun RoutinesScreen(
                 }
             }
         }
-
-        Spacer(modifier = Modifier.height(32.dp))
     }
 }
 
@@ -393,17 +385,17 @@ fun RoutineTabCard(
 ) {
     Card(
         modifier = modifier
-            .height(120.dp)
-            .clip(RoundedCornerShape(22.dp))
+            .height(92.dp)
+            .clip(RoundedCornerShape(20.dp))
             .clickable { onClick() },
-        shape = RoundedCornerShape(22.dp),
+        shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = SurfaceVariant),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 6.dp, vertical = 14.dp),
+                .padding(horizontal = 6.dp, vertical = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.SpaceBetween
         ) {
@@ -420,7 +412,7 @@ fun RoutineTabCard(
                 text = time,
                 fontFamily = GoogleSans,
                 fontWeight = FontWeight.Bold,
-                fontSize = 19.sp,
+                fontSize = 18.sp,
                 color = if (isSelected) CharcoalPrimary else SecondaryMuted
             )
 
@@ -450,9 +442,9 @@ fun VerticalOnOffSwitch(
 
     Card(
         modifier = modifier
-            .height(120.dp)
-            .clip(RoundedCornerShape(22.dp)),
-        shape = RoundedCornerShape(22.dp),
+            .height(92.dp)
+            .clip(RoundedCornerShape(20.dp)),
+        shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = Color.Transparent),
         border = androidx.compose.foundation.BorderStroke(1.dp, OutlineSubtle),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
@@ -460,7 +452,7 @@ fun VerticalOnOffSwitch(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(4.dp)
+                .padding(3.dp)
                 .pointerInput(Unit) {
                     detectVerticalDragGestures(
                         onVerticalDrag = { change, dragAmount ->
@@ -482,8 +474,8 @@ fun VerticalOnOffSwitch(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(52.dp)
-                    .clip(RoundedCornerShape(16.dp))
+                    .height(39.dp)
+                    .clip(RoundedCornerShape(14.dp))
                     .background(if (isEnabled) AccentOrange else Color.Transparent)
                     .clickable {
                         if (!isEnabled) {
@@ -497,7 +489,7 @@ fun VerticalOnOffSwitch(
                     text = "ON",
                     fontFamily = GoogleSans,
                     fontWeight = FontWeight.Bold,
-                    fontSize = 12.sp,
+                    fontSize = 11.sp,
                     color = if (isEnabled) Color.White else SecondaryGray
                 )
             }
@@ -506,8 +498,8 @@ fun VerticalOnOffSwitch(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(52.dp)
-                    .clip(RoundedCornerShape(16.dp))
+                    .height(39.dp)
+                    .clip(RoundedCornerShape(14.dp))
                     .background(if (!isEnabled) CharcoalPrimary else Color.Transparent)
                     .clickable {
                         if (isEnabled) {
@@ -521,7 +513,7 @@ fun VerticalOnOffSwitch(
                     text = "OFF",
                     fontFamily = GoogleSans,
                     fontWeight = FontWeight.Bold,
-                    fontSize = 12.sp,
+                    fontSize = 11.sp,
                     color = if (!isEnabled) SurfaceBright else SecondaryGray
                 )
             }
@@ -545,7 +537,7 @@ fun DraggableDaySlot(
 
     // Smooth animated vertical offset for thumb
     val thumbOffset by androidx.compose.animation.core.animateDpAsState(
-        targetValue = if (isActive) 0.dp else 30.dp,
+        targetValue = if (isActive) 0.dp else 22.dp,
         animationSpec = androidx.compose.animation.core.spring(
             dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
             stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow
@@ -555,23 +547,23 @@ fun DraggableDaySlot(
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         Text(
             text = label,
             fontFamily = GoogleSans,
             fontWeight = FontWeight.Bold,
-            fontSize = 13.sp,
+            fontSize = 12.sp,
             color = CharcoalPrimary
         )
 
-        // Vertical Pill Track (width 32.dp, height 64.dp)
+        // Vertical Pill Track (width 28.dp, height 48.dp)
         Box(
             modifier = Modifier
-                .size(width = 32.dp, height = 64.dp)
-                .clip(RoundedCornerShape(14.dp))
+                .size(width = 28.dp, height = 48.dp)
+                .clip(RoundedCornerShape(12.dp))
                 .background(ScreenBackground)
-                .padding(3.dp)
+                .padding(2.5.dp)
                 .pointerInput(Unit) {
                     detectVerticalDragGestures(
                         onVerticalDrag = { change, dragAmount ->
@@ -595,8 +587,8 @@ fun DraggableDaySlot(
             Box(
                 modifier = Modifier
                     .offset(y = thumbOffset)
-                    .size(26.dp, 26.dp)
-                    .clip(RoundedCornerShape(9.dp))
+                    .size(23.dp, 21.dp)
+                    .clip(RoundedCornerShape(8.dp))
                     .background(if (isActive) AccentOrange else SecondaryGray.copy(alpha = 0.35f))
             )
         }

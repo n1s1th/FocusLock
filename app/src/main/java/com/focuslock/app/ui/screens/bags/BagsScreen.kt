@@ -107,12 +107,10 @@ fun BagsScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(ScreenBackground)
-            .padding(horizontal = 16.dp)
-            .verticalScroll(rememberScrollState()),
-        horizontalAlignment = Alignment.CenterHorizontally
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.SpaceBetween
     ) {
-        Spacer(modifier = Modifier.height(14.dp))
-
         // 1. TOP HEADER (Live Streaks + Total Parachutes)
         TopHeaderBar(
             streakCount = viewModel.currentStreak,
@@ -120,14 +118,12 @@ fun BagsScreen(
             onProfileClick = onNavigateToSettings
         )
 
-        Spacer(modifier = Modifier.height(16.dp))
-
         // 2. TOP WHITE CARD (3 Pixel-Art Bags, All Unlocked)
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(190.dp),
-            shape = RoundedCornerShape(38.dp),
+                .height(155.dp),
+            shape = RoundedCornerShape(32.dp),
             colors = CardDefaults.cardColors(containerColor = SurfaceBright),
             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
         ) {
@@ -142,19 +138,17 @@ fun BagsScreen(
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
-
         // 3. MIDDLE SECTION (3 Bag Tabs + 6 App Slots Grid)
         Card(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(28.dp),
+            shape = RoundedCornerShape(26.dp),
             colors = CardDefaults.cardColors(containerColor = SurfaceVariant),
             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(14.dp)
+                    .padding(horizontal = 12.dp, vertical = 10.dp)
             ) {
                 // 3 Bag Selector Pill Tabs
                 Row(
@@ -166,8 +160,8 @@ fun BagsScreen(
                         Box(
                             modifier = Modifier
                                 .weight(1f)
-                                .height(44.dp)
-                                .clip(RoundedCornerShape(22.dp))
+                                .height(38.dp)
+                                .clip(RoundedCornerShape(19.dp))
                                 .background(if (isSelected) AccentOrange else Color.Transparent)
                                 .clickable { selectedBagIndex = index },
                             contentAlignment = Alignment.Center
@@ -176,14 +170,14 @@ fun BagsScreen(
                                 text = title,
                                 fontFamily = GoogleSans,
                                 fontWeight = FontWeight.Bold,
-                                fontSize = 13.sp,
+                                fontSize = 12.sp,
                                 color = if (isSelected) SurfaceBright else SecondaryGray
                             )
                         }
                     }
                 }
 
-                Spacer(modifier = Modifier.height(14.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
                 // 6 App Spaces (2 Rows of 3 Slots, 100% Unlocked, Zero Locks)
                 val currentPackages = currentBag?.allowedPackages ?: emptyList()
@@ -191,7 +185,7 @@ fun BagsScreen(
                 // Row 1: Slots 0, 1, 2
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     for (slot in 0..2) {
                         val pkg = currentPackages.getOrNull(slot)
@@ -212,12 +206,12 @@ fun BagsScreen(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
                 // Row 2: Slots 3, 4, 5
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     for (slot in 3..5) {
                         val pkg = currentPackages.getOrNull(slot)
@@ -240,8 +234,6 @@ fun BagsScreen(
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
-
         // 4. BOTTOM PARACHUTE SECTION (100% Free - Weekly + 5h Cooldown, Zero Payments)
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -250,9 +242,9 @@ fun BagsScreen(
             // Left Parachute Balance Card
             Card(
                 modifier = Modifier
-                    .width(96.dp)
-                    .height(180.dp),
-                shape = RoundedCornerShape(24.dp),
+                    .width(92.dp)
+                    .height(145.dp),
+                shape = RoundedCornerShape(22.dp),
                 colors = CardDefaults.cardColors(containerColor = Color.Transparent),
                 border = androidx.compose.foundation.BorderStroke(1.dp, OutlineSubtle),
                 elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
@@ -314,8 +306,8 @@ fun BagsScreen(
             Column(
                 modifier = Modifier
                     .weight(1f)
-                    .height(180.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
+                    .height(145.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 // 1. Weekly Parachute Status Card (1 Free / Week)
                 val weeklyDaysRemaining = (weeklyRemainingMillis / (1000 * 60 * 60 * 24)).coerceAtLeast(0)
@@ -526,8 +518,6 @@ fun BagsScreen(
                 }
             }
         }
-
-        Spacer(modifier = Modifier.height(32.dp))
     }
 
     // App Picker Sheet
@@ -586,10 +576,10 @@ fun AppSlotItem(
 
     Card(
         modifier = modifier
-            .height(72.dp)
-            .clip(RoundedCornerShape(16.dp))
+            .height(58.dp)
+            .clip(RoundedCornerShape(14.dp))
             .clickable { onClick() },
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(containerColor = ScreenBackground),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
@@ -612,8 +602,8 @@ fun AppSlotItem(
                             bitmap = bitmap,
                             contentDescription = appInfo.appName,
                             modifier = Modifier
-                                .size(38.dp)
-                                .clip(RoundedCornerShape(10.dp))
+                                .size(32.dp)
+                                .clip(RoundedCornerShape(8.dp))
                         )
                     } else {
                         FallbackSlotIcon(appInfo.appName)

@@ -93,12 +93,10 @@ fun StatsScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(ScreenBackground)
-            .padding(horizontal = 16.dp)
-            .verticalScroll(rememberScrollState()),
-        horizontalAlignment = Alignment.CenterHorizontally
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.SpaceBetween
     ) {
-        Spacer(modifier = Modifier.height(14.dp))
-
         // 1. TOP HEADER — Fix 5: live streak + parachute count
         TopHeaderBar(
             streakCount = viewModel.getStreak(),
@@ -106,25 +104,23 @@ fun StatsScreen(
             onProfileClick = onNavigateToSettings
         )
 
-        Spacer(modifier = Modifier.height(16.dp))
-
         // 2. TOP WHITE CARD — Fix 5: real bar chart from weekly session data
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(190.dp),
-            shape = RoundedCornerShape(38.dp),
+                .height(145.dp),
+            shape = RoundedCornerShape(32.dp),
             colors = CardDefaults.cardColors(containerColor = SurfaceBright),
             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
         ) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(horizontal = 24.dp, vertical = 20.dp),
+                    .padding(horizontal = 20.dp, vertical = 14.dp),
                 contentAlignment = Alignment.BottomStart
             ) {
                 Canvas(modifier = Modifier.fillMaxSize()) {
-                    val bottomY = size.height - 10.dp.toPx()
+                    val bottomY = size.height - 8.dp.toPx()
                     val barWidth = 6.dp.toPx()
                     val barGap = 4.dp.toPx()
 
@@ -157,26 +153,22 @@ fun StatsScreen(
             }
         }
 
-        Spacer(modifier = Modifier.height(14.dp))
-
         // Fix 5: Real day label from today's actual session data
         Text(
             text = dayLabel,
             fontFamily = GoogleSans,
             fontWeight = FontWeight.Bold,
-            fontSize = 11.sp,
-            letterSpacing = 1.5.sp,
+            fontSize = 10.sp,
+            letterSpacing = 1.2.sp,
             color = SecondaryGray
         )
-
-        Spacer(modifier = Modifier.height(14.dp))
 
         // 3. DATE SELECTOR CARD — Fix 5: working prev/next navigation
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(68.dp),
-            shape = RoundedCornerShape(22.dp),
+                .height(52.dp),
+            shape = RoundedCornerShape(20.dp),
             colors = CardDefaults.cardColors(containerColor = SurfaceVariant),
             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
         ) {
@@ -187,7 +179,7 @@ fun StatsScreen(
                 // Prev Button
                 Box(
                     modifier = Modifier
-                        .size(68.dp)
+                        .size(52.dp)
                         .clickable {
                             // Fix 5: Navigate backward in time
                             val prev = displayedCalendar.clone() as Calendar
@@ -204,21 +196,21 @@ fun StatsScreen(
                         imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
                         contentDescription = "Previous",
                         tint = SecondaryGray,
-                        modifier = Modifier.size(28.dp)
+                        modifier = Modifier.size(24.dp)
                     )
                 }
 
                 Box(
                     modifier = Modifier
                         .width(1.dp)
-                        .height(68.dp)
+                        .height(52.dp)
                         .background(OutlineSubtle)
                 )
 
                 Box(
                     modifier = Modifier
                         .weight(1f)
-                        .height(68.dp),
+                        .height(52.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     // Fix 5: Real calendar-driven label
@@ -226,8 +218,8 @@ fun StatsScreen(
                         text = monthYearLabel,
                         fontFamily = GoogleSans,
                         fontWeight = FontWeight.Bold,
-                        fontSize = 13.sp,
-                        letterSpacing = 1.2.sp,
+                        fontSize = 12.sp,
+                        letterSpacing = 1.1.sp,
                         color = CharcoalPrimary
                     )
                 }
@@ -235,7 +227,7 @@ fun StatsScreen(
                 Box(
                     modifier = Modifier
                         .width(1.dp)
-                        .height(68.dp)
+                        .height(52.dp)
                         .background(OutlineSubtle)
                 )
 
@@ -252,7 +244,7 @@ fun StatsScreen(
                 }
                 Box(
                     modifier = Modifier
-                        .size(68.dp)
+                        .size(52.dp)
                         .clickable(enabled = !isAtPresent) {
                             // Fix 5: Navigate forward in time
                             val next = displayedCalendar.clone() as Calendar
@@ -269,27 +261,25 @@ fun StatsScreen(
                         imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                         contentDescription = "Next",
                         tint = SecondaryGray.copy(alpha = if (isAtPresent) 0.25f else 0.8f),
-                        modifier = Modifier.size(28.dp)
+                        modifier = Modifier.size(24.dp)
                     )
                 }
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
-
         // 4. BOTTOM SECTION: Period mode + Rotary wheel + Stats summary
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(200.dp),
+                .height(155.dp),
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             // Left Column: Day / Month / Year mode buttons
             Column(
                 modifier = Modifier
-                    .width(96.dp)
+                    .width(88.dp)
                     .fillMaxSize(),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 listOf("Day", "Month", "Year").forEachIndexed { index, mode ->
                     val isSelected = index == selectedPeriodMode
@@ -297,7 +287,7 @@ fun StatsScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .weight(1f)
-                            .clip(RoundedCornerShape(18.dp))
+                            .clip(RoundedCornerShape(16.dp))
                             .background(if (isSelected) CharcoalPrimary else SurfaceVariant)
                             .clickable {
                                 selectedPeriodMode = index
@@ -310,7 +300,7 @@ fun StatsScreen(
                             text = mode,
                             fontFamily = GoogleSans,
                             fontWeight = FontWeight.Bold,
-                            fontSize = 13.sp,
+                            fontSize = 12.sp,
                             color = if (isSelected) SurfaceBright else SecondaryGray
                         )
                     }
@@ -322,7 +312,7 @@ fun StatsScreen(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxSize(),
-                shape = RoundedCornerShape(26.dp),
+                shape = RoundedCornerShape(22.dp),
                 colors = CardDefaults.cardColors(containerColor = SurfaceVariant),
                 elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
             ) {
@@ -333,7 +323,7 @@ fun StatsScreen(
                     RotaryGaugeView(
                         angleDegrees = rotaryAngle,
                         onAngleChanged = { rotaryAngle = it },
-                        modifier = Modifier.size(170.dp)
+                        modifier = Modifier.size(135.dp)
                     )
                     // Fix 5: Show real total sessions count in the center of the gauge
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -341,13 +331,13 @@ fun StatsScreen(
                             text = "$totalCompletedSessions",
                             fontFamily = GoogleSans,
                             fontWeight = FontWeight.Bold,
-                            fontSize = 22.sp,
+                            fontSize = 20.sp,
                             color = CharcoalPrimary
                         )
                         Text(
                             text = "sessions",
                             fontFamily = GoogleSans,
-                            fontSize = 11.sp,
+                            fontSize = 10.sp,
                             color = SecondaryGray
                         )
                     }
@@ -355,12 +345,10 @@ fun StatsScreen(
             }
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
-
         // Fix 5: Real lifetime stats summary row
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             StatSummaryCard(
                 label = "Today",
@@ -378,8 +366,6 @@ fun StatsScreen(
                 modifier = Modifier.weight(1f)
             )
         }
-
-        Spacer(modifier = Modifier.height(32.dp))
     }
 }
 
@@ -390,15 +376,15 @@ private fun StatSummaryCard(
     modifier: Modifier = Modifier
 ) {
     Card(
-        modifier = modifier.height(72.dp),
-        shape = RoundedCornerShape(20.dp),
+        modifier = modifier.height(56.dp),
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = SurfaceBright),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(12.dp),
+                .padding(4.dp),
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
@@ -406,7 +392,7 @@ private fun StatSummaryCard(
                 text = value,
                 fontFamily = GoogleSans,
                 fontWeight = FontWeight.Bold,
-                fontSize = 14.sp,
+                fontSize = 13.sp,
                 color = CharcoalPrimary
             )
             Spacer(modifier = Modifier.height(2.dp))

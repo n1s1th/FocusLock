@@ -2,6 +2,8 @@ package com.focuslock.app.ui.navigation
 
 import android.content.Intent
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -10,18 +12,18 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -29,10 +31,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.focuslock.app.ui.screens.bags.BagsScreen
 import com.focuslock.app.ui.screens.home.HomeScreen
@@ -43,22 +43,51 @@ import com.focuslock.app.ui.screens.stats.StatsScreen
 import com.focuslock.app.ui.theme.AccentOrange
 import com.focuslock.app.ui.theme.CharcoalPrimary
 import com.focuslock.app.ui.theme.ScreenBackground
-import com.focuslock.app.ui.theme.SecondaryGray
 import com.focuslock.app.ui.theme.SurfaceBright
+import kotlinx.coroutines.launch
 
 @Composable
 fun AppNavigation() {
     val navController = rememberNavController()
     val context = LocalContext.current
-    val navBackStackEntry by navController.currentBackStackEntryAsState()
-    val currentDestination = navBackStackEntry?.destination
 
+    NavHost(
+        navController = navController,
+        startDestination = "main_pager"
+    ) {
+        composable("main_pager") {
+            MainPagerScreen(
+                onNavigateToLock = {
+                    val lockIntent = Intent(context, LockScreenActivity::class.java)
+                    context.startActivity(lockIntent)
+                },
+                onNavigateToSettings = {
+                    navController.navigate(Screen.Settings.route)
+                }
+            )
+        }
+        composable(Screen.Settings.route) {
+            SettingsScreen(
+                onBack = { navController.popBackStack() }
+            )
+        }
+    }
+}
+
+@Composable
+fun MainPagerScreen(
+    onNavigateToLock: () -> Unit,
+    onNavigateToSettings: () -> Unit
+) {
     val navItems = listOf(
         Screen.Home,
         Screen.Bags,
         Screen.Routines,
         Screen.Stats
     )
+
+    val pagerState = rememberPagerState(initialPage = 0, pageCount = { navItems.size })
+    val coroutineScope = rememberCoroutineScope()
 
     Scaffold(
         containerColor = ScreenBackground,
@@ -79,29 +108,37 @@ fun AppNavigation() {
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    navItems.forEach { screen ->
-                        val isSelected = currentDestination?.route == screen.route
+                    navItems.forEachIndexed { index, screen ->
+                        val isSelected = pagerState.currentPage == index
 
                         val iconColor by animateColorAsState(
                             targetValue = if (isSelected) SurfaceBright else CharcoalPrimary,
+                            animationSpec = tween(durationMillis = 200),
                             label = "navIconColor"
+                        )
+                        val pillBgColor by animateColorAsState(
+                            targetValue = if (isSelected) CharcoalPrimary else Color.Transparent,
+                            animationSpec = tween(durationMillis = 200),
+                            label = "navPillBgColor"
                         )
 
                         Box(
                             modifier = Modifier
                                 .size(width = 54.dp, height = 40.dp)
                                 .clip(RoundedCornerShape(20.dp))
-                                .background(if (isSelected) CharcoalPrimary else Color.Transparent)
+                                .background(pillBgColor)
                                 .clickable(
                                     interactionSource = remember { MutableInteractionSource() },
                                     indication = null
                                 ) {
-                                    navController.navigate(screen.route) {
-                                        popUpTo(navController.graph.findStartDestination().id) {
-                                            saveState = true
-                                        }
-                                        launchSingleTop = true
-                                        restoreState = true
+                                    coroutineScope.launch {
+                                        pagerState.animateScrollToPage(
+                                            page = index,
+                                            animationSpec = tween(
+                                                durationMillis = 280,
+                                                easing = FastOutSlowInEasing
+                                            )
+                                        )
                                     }
                                 },
                             contentAlignment = Alignment.Center
@@ -130,71 +167,28 @@ fun AppNavigation() {
             }
         }
     ) { innerPadding ->
-        NavHost(
-            navController = navController,
-            startDestination = Screen.Home.route,
+        HorizontalPager(
+            state = pagerState,
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding)
-        ) {
-            composable(Screen.Home.route) {
-                HomeScreen(
-                    onNavigateToLock = {
-                        val lockIntent = Intent(context, LockScreenActivity::class.java)
-                        context.startActivity(lockIntent)
-                    },
-                    onNavigateToSettings = {
-                        navController.navigate(Screen.Settings.route) {
-                            popUpTo(navController.graph.findStartDestination().id) {
-                                saveState = true
-                            }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    }
+                .padding(innerPadding),
+            beyondViewportPageCount = 3, // Cache adjacent screens for instantaneous 120 FPS swiping
+            key = { page -> navItems[page].route }
+        ) { page ->
+            when (page) {
+                0 -> HomeScreen(
+                    onNavigateToLock = onNavigateToLock,
+                    onNavigateToSettings = onNavigateToSettings
                 )
-            }
-            composable(Screen.Bags.route) {
-                BagsScreen(
-                    onNavigateToSettings = {
-                        navController.navigate(Screen.Settings.route) {
-                            popUpTo(navController.graph.findStartDestination().id) {
-                                saveState = true
-                            }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    }
+                1 -> BagsScreen(
+                    onNavigateToSettings = onNavigateToSettings
                 )
-            }
-            composable(Screen.Routines.route) {
-                RoutinesScreen(
-                    onNavigateToSettings = {
-                        navController.navigate(Screen.Settings.route) {
-                            popUpTo(navController.graph.findStartDestination().id) {
-                                saveState = true
-                            }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    }
+                2 -> RoutinesScreen(
+                    onNavigateToSettings = onNavigateToSettings
                 )
-            }
-            composable(Screen.Stats.route) {
-                StatsScreen(
-                    onNavigateToSettings = {
-                        navController.navigate(Screen.Settings.route) {
-                            popUpTo(navController.graph.findStartDestination().id) {
-                                saveState = true
-                            }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    }
+                3 -> StatsScreen(
+                    onNavigateToSettings = onNavigateToSettings
                 )
-            }
-            composable(Screen.Settings.route) {
-                SettingsScreen()
             }
         }
     }
