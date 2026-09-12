@@ -1,9 +1,11 @@
 package com.focuslock.app.service
 
 import android.accessibilityservice.AccessibilityService
+import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.SystemClock
+import android.telephony.TelephonyManager
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
@@ -28,6 +30,16 @@ class FocusAccessibilityService : AccessibilityService() {
         "com.android.dialer",
         "com.android.server.telecom",
         "com.android.incallui",
+        "com.samsung.android.incallui",
+        "com.samsung.android.dialer",
+        "com.miui.incallui",
+        "com.coloros.incallui",
+        "com.coloros.telephony",
+        "com.vivo.incallui",
+        "com.oneplus.dialer",
+        "com.oppo.dialer",
+        "com.transsion.incallui",
+        "com.huawei.android.incallui",
         "com.google.android.inputmethod.latin",
         "com.android.inputmethod.latin",
         "com.samsung.android.honeyboard",
@@ -43,6 +55,26 @@ class FocusAccessibilityService : AccessibilityService() {
         "com.google.android.gms",
         "com.google.android.gsf"
     )
+
+    private fun isPhoneCallPackage(packageName: String): Boolean {
+        val lower = packageName.lowercase(Locale.ROOT)
+        return lower.contains("incallui") ||
+                lower.contains("telecom") ||
+                lower.contains("telephony") ||
+                (lower.contains("dialer") && !lower.contains("game")) ||
+                lower.contains("calling")
+    }
+
+    private fun isPhoneCallActiveOrRinging(): Boolean {
+        return try {
+            val tm = getSystemService(Context.TELEPHONY_SERVICE) as? TelephonyManager
+            @Suppress("DEPRECATION")
+            val state = tm?.callState ?: TelephonyManager.CALL_STATE_IDLE
+            state == TelephonyManager.CALL_STATE_RINGING || state == TelephonyManager.CALL_STATE_OFFHOOK
+        } catch (e: Exception) {
+            false
+        }
+    }
 
     companion object {
         var isServiceRunning: Boolean = false
@@ -119,6 +151,12 @@ class FocusAccessibilityService : AccessibilityService() {
         val packageName = event.packageName?.toString() ?: return
         val className = event.className?.toString() ?: ""
 
+        // Never intercept, block, or redirect when a phone call is incoming/ringing or active
+        if (isPhoneCallActiveOrRinging() || isPhoneCallPackage(packageName)) {
+            Log.d("FocusA11y", "Allowing active/ringing phone call interaction: $packageName ($className)")
+            return
+        }
+
         // Check for SystemUI shade or recents suppression
         if (packageName == "com.android.systemui") {
             handleSystemUiInteractions(className, app)
@@ -165,6 +203,12 @@ class FocusAccessibilityService : AccessibilityService() {
     }
 
     private fun handleSystemUiInteractions(className: String, app: FocusLockApp) {
+        // If a call is ringing or active, do not dismiss notification shade or go home
+        if (isPhoneCallActiveOrRinging()) {
+            Log.d("FocusA11y", "Phone call active/ringing; bypassing SystemUI dismissal")
+            return
+        }
+
         val lowerClass = className.lowercase(Locale.ROOT)
 
         // Block multitasking / recents switcher
@@ -200,6 +244,9 @@ class FocusAccessibilityService : AccessibilityService() {
     }
 
     private fun isPackageAllowed(packageName: String): Boolean {
+        // 0. Phone calls and dialer UI
+        if (isPhoneCallActiveOrRinging() || isPhoneCallPackage(packageName)) return true
+
         // 1. Essential system apps
         if (systemEssentialPackages.contains(packageName)) return true
 

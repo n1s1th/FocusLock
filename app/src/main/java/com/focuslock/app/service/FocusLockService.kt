@@ -27,6 +27,29 @@ class FocusLockService : Service() {
     private val serviceScope = CoroutineScope(Dispatchers.Main + Job())
     private var countdownJob: Job? = null
 
+    private val screenReceiver = object : android.content.BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == Intent.ACTION_SCREEN_ON) {
+                if (FocusLockApp.instance.preferences.isSessionActive()) {
+                    val lockIntent = Intent(context, LockScreenActivity::class.java).apply {
+                        addFlags(
+                            Intent.FLAG_ACTIVITY_NEW_TASK or
+                            Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or
+                            Intent.FLAG_ACTIVITY_SINGLE_TOP
+                        )
+                    }
+                    context?.startActivity(lockIntent)
+                }
+            }
+        }
+    }
+
+    override fun onCreate() {
+        super.onCreate()
+        val filter = android.content.IntentFilter(Intent.ACTION_SCREEN_ON)
+        registerReceiver(screenReceiver, filter)
+    }
+
     companion object {
         const val ACTION_START_LOCK = "ACTION_START_LOCK"
         const val ACTION_STOP_LOCK = "ACTION_STOP_LOCK"
@@ -175,6 +198,9 @@ class FocusLockService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
+        try {
+            unregisterReceiver(screenReceiver)
+        } catch (_: Exception) {}
         countdownJob?.cancel()
         // Schedule watchdog alarm if session was stopped unexpectedly
         if (FocusLockApp.instance.preferences.isSessionActive()) {
