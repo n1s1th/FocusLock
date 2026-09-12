@@ -80,12 +80,12 @@ fun RoutinesScreen(
     val routines by viewModel.routines.collectAsState()
     var selectedRoutineIndex by remember { mutableIntStateOf(0) }
 
-    // Fix 6: Only use real DB entities — never mix fallback IDs with live data.
+    // Standalone resolution: Bind each tab strictly by ID (1L -> Routine 1, 2L -> Routine 2, 3L -> Routine 3)
     // If loading, show zero-state defaults (id=-1 so no ViewModel write will match a real row).
     val emptyRoutine = RoutineEntity(id = -1L, name = "Loading", targetBagId = 1L, startHour = 9, startMinute = 0, durationMinutes = 60, activeDaysMask = 62, isEnabled = false)
-    val routine1 = routines.getOrNull(0) ?: emptyRoutine.copy(name = "Routine 1")
-    val routine2 = routines.getOrNull(1) ?: emptyRoutine.copy(name = "Routine 2")
-    val routine3 = routines.getOrNull(2) ?: emptyRoutine.copy(name = "Routine 3")
+    val routine1 = routines.find { it.id == 1L } ?: routines.getOrNull(0) ?: emptyRoutine.copy(name = "Routine 1", targetBagId = 1L)
+    val routine2 = routines.find { it.id == 2L } ?: routines.getOrNull(1) ?: emptyRoutine.copy(name = "Routine 2", targetBagId = 2L)
+    val routine3 = routines.find { it.id == 3L } ?: routines.getOrNull(2) ?: emptyRoutine.copy(name = "Routine 3", targetBagId = 3L)
     val routineList = listOf(routine1, routine2, routine3)
 
     // Use the currently selected real routine (or first if index out of range)
@@ -222,9 +222,10 @@ fun RoutinesScreen(
                 .height(105.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            // Routine 1
+            // Routine 1 (Strictly Bag 01)
             RoutineTabCard(
                 label = "ROUTINE 1",
+                bagLabel = "BAG 01",
                 time = String.format(Locale.US, "%02d:%02d", routine1.startHour, routine1.startMinute),
                 isSelected = selectedRoutineIndex == 0,
                 onClick = { selectedRoutineIndex = 0 },
@@ -233,9 +234,10 @@ fun RoutinesScreen(
                     .fillMaxHeight()
             )
 
-            // Routine 2
+            // Routine 2 (Strictly Bag 02)
             RoutineTabCard(
                 label = "ROUTINE 2",
+                bagLabel = "BAG 02",
                 time = String.format(Locale.US, "%02d:%02d", routine2.startHour, routine2.startMinute),
                 isSelected = selectedRoutineIndex == 1,
                 onClick = { selectedRoutineIndex = 1 },
@@ -244,9 +246,10 @@ fun RoutinesScreen(
                     .fillMaxHeight()
             )
 
-            // Routine 3 (100% Unlocked, Zero Locks!)
+            // Routine 3 (Strictly Bag 03)
             RoutineTabCard(
                 label = "ROUTINE 3",
+                bagLabel = "BAG 03",
                 time = String.format(Locale.US, "%02d:%02d", routine3.startHour, routine3.startMinute),
                 isSelected = selectedRoutineIndex == 2,
                 onClick = { selectedRoutineIndex = 2 },
@@ -343,6 +346,19 @@ fun RoutinesScreen(
                         fontSize = 12.sp,
                         color = if (isEnabled) AccentOrange else AccentOrange.copy(alpha = 0.7f)
                     )
+                    Text(
+                        text = " · ",
+                        fontFamily = GoogleSans,
+                        fontSize = 12.sp,
+                        color = SecondaryGray
+                    )
+                    Text(
+                        text = "Bag 0${selectedRoutineIndex + 1}",
+                        fontFamily = GoogleSans,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 12.sp,
+                        color = CharcoalPrimary
+                    )
                 }
 
                 // Dual Scrollable Time Rulers: START and END
@@ -386,6 +402,7 @@ fun RoutinesScreen(
 @Composable
 fun RoutineTabCard(
     label: String,
+    bagLabel: String,
     time: String,
     isSelected: Boolean,
     onClick: () -> Unit,
@@ -402,7 +419,7 @@ fun RoutineTabCard(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 6.dp, vertical = 8.dp),
+                .padding(horizontal = 4.dp, vertical = 6.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.SpaceBetween
         ) {
@@ -410,8 +427,8 @@ fun RoutineTabCard(
                 text = label,
                 fontFamily = GoogleSans,
                 fontWeight = FontWeight.Bold,
-                fontSize = 10.sp,
-                letterSpacing = 1.sp,
+                fontSize = 9.5.sp,
+                letterSpacing = 0.8.sp,
                 color = if (isSelected) CharcoalPrimary else SecondaryGray
             )
 
@@ -419,15 +436,32 @@ fun RoutineTabCard(
                 text = time,
                 fontFamily = GoogleSans,
                 fontWeight = FontWeight.Bold,
-                fontSize = 18.sp,
+                fontSize = 17.sp,
                 color = if (isSelected) CharcoalPrimary else SecondaryMuted
             )
+
+            // Dedicated Bag badge (e.g. BAG 01)
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(5.dp))
+                    .background(if (isSelected) CharcoalPrimary.copy(alpha = 0.08f) else Color.Transparent)
+                    .padding(horizontal = 5.dp, vertical = 1.dp)
+            ) {
+                Text(
+                    text = bagLabel,
+                    fontFamily = GoogleSans,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 9.sp,
+                    letterSpacing = 0.5.sp,
+                    color = if (isSelected) AccentOrange else SecondaryGray.copy(alpha = 0.75f)
+                )
+            }
 
             // Bottom horizontal indicator underline
             Box(
                 modifier = Modifier
-                    .size(width = 36.dp, height = 3.dp)
-                    .clip(RoundedCornerShape(2.dp))
+                    .size(width = 32.dp, height = 2.5.dp)
+                    .clip(RoundedCornerShape(1.5.dp))
                     .background(if (isSelected) CharcoalPrimary else Color.Transparent)
             )
         }

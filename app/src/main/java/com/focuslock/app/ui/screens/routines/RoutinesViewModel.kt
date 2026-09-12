@@ -41,8 +41,13 @@ class RoutinesViewModel(application: Application) : AndroidViewModel(application
     private fun ensureDefaultRoutines() {
         viewModelScope.launch(Dispatchers.IO) {
             val dao = app.database.routineDao()
+            val bagDao = app.database.bagDao()
+            val allBags = bagDao.getAllBags()
+            val bag1Id = allBags.getOrNull(0)?.id ?: 1L
+            val bag2Id = allBags.getOrNull(1)?.id ?: 2L
+            val bag3Id = allBags.getOrNull(2)?.id ?: 3L
 
-            // Check each by explicit ID to only insert truly missing ones
+            // Check each by explicit ID to only insert truly missing ones, and ensure dedicated bag mapping
             val r1 = dao.getRoutineById(1L)
             val r2 = dao.getRoutineById(2L)
             val r3 = dao.getRoutineById(3L)
@@ -52,7 +57,7 @@ class RoutinesViewModel(application: Application) : AndroidViewModel(application
                     RoutineEntity(
                         id = 1,
                         name = "Routine 1",
-                        targetBagId = 1L,
+                        targetBagId = bag1Id,
                         startHour = 9,
                         startMinute = 0,
                         durationMinutes = 60,
@@ -60,13 +65,16 @@ class RoutinesViewModel(application: Application) : AndroidViewModel(application
                         isEnabled = false
                     )
                 )
+            } else if (r1.targetBagId != bag1Id) {
+                dao.updateRoutine(r1.copy(targetBagId = bag1Id))
             }
+
             if (r2 == null) {
                 dao.insertRoutine(
                     RoutineEntity(
                         id = 2,
                         name = "Routine 2",
-                        targetBagId = 1L,
+                        targetBagId = bag2Id,
                         startHour = 14,
                         startMinute = 0,
                         durationMinutes = 60,
@@ -74,13 +82,16 @@ class RoutinesViewModel(application: Application) : AndroidViewModel(application
                         isEnabled = false
                     )
                 )
+            } else if (r2.targetBagId != bag2Id) {
+                dao.updateRoutine(r2.copy(targetBagId = bag2Id))
             }
+
             if (r3 == null) {
                 dao.insertRoutine(
                     RoutineEntity(
                         id = 3,
                         name = "Routine 3",
-                        targetBagId = 1L,
+                        targetBagId = bag3Id,
                         startHour = 20,
                         startMinute = 0,
                         durationMinutes = 60,
@@ -88,12 +99,14 @@ class RoutinesViewModel(application: Application) : AndroidViewModel(application
                         isEnabled = false
                     )
                 )
+            } else if (r3.targetBagId != bag3Id) {
+                dao.updateRoutine(r3.copy(targetBagId = bag3Id))
             }
         }
     }
 
     /**
-     * Fix 12: Calculate duration without forcing a 15-min minimum distortion.
+     * Calculate duration without forcing a 15-min minimum distortion.
      * The minimum stored duration is 15 min, but adjust endHour/endMinute accordingly
      * so the display stays consistent with what the user set.
      */
@@ -104,10 +117,17 @@ class RoutinesViewModel(application: Application) : AndroidViewModel(application
             val rawDuration = if (endTotal >= startTotal) (endTotal - startTotal) else (24 * 60 - startTotal + endTotal)
             // Clamp to at least 15 minutes but store the actual start/end
             val duration = maxOf(15, rawDuration)
+            val expectedBagId = when (routine.id) {
+                1L -> 1L
+                2L -> 2L
+                3L -> 3L
+                else -> routine.targetBagId
+            }
             val updated = routine.copy(
                 startHour = startHour,
                 startMinute = startMinute,
-                durationMinutes = duration
+                durationMinutes = duration,
+                targetBagId = expectedBagId
             )
             app.database.routineDao().updateRoutine(updated)
             if (updated.isEnabled) {

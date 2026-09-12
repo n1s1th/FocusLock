@@ -11,7 +11,7 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface RoutineDao {
-    @Query("SELECT * FROM routines ORDER BY startHour ASC, startMinute ASC")
+    @Query("SELECT * FROM routines ORDER BY id ASC")
     fun getAllRoutinesFlow(): Flow<List<RoutineEntity>>
 
     @Query("SELECT * FROM routines WHERE isEnabled = 1")
