@@ -67,7 +67,6 @@
             android:launchMode="singleTask"
             android:screenOrientation="portrait"
             android:showWhenLocked="true"
-            android:turnScreenOn="true"
             android:theme="@style/Theme.FocusLock.Fullscreen" />
 
         <!-- Core Foreground Lock Service -->

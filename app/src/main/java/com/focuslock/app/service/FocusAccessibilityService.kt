@@ -1,9 +1,11 @@
 package com.focuslock.app.service
 
 import android.accessibilityservice.AccessibilityService
+import android.app.KeyguardManager
 import android.content.Context
 import android.content.Intent
 import android.os.Build
+import android.os.PowerManager
 import android.os.SystemClock
 import android.telephony.TelephonyManager
 import android.util.Log
@@ -53,7 +55,13 @@ class FocusAccessibilityService : AccessibilityService() {
         "com.google.android.documentsui",
         "com.google.android.settings.intelligence",
         "com.google.android.gms",
-        "com.google.android.gsf"
+        "com.google.android.gsf",
+        "com.android.keyguard",
+        "com.samsung.android.app.aodservice",
+        "com.miui.aod",
+        "com.oplus.aod",
+        "com.vivo.upslide",
+        "com.google.android.ambientindication"
     )
 
     private fun isPhoneCallPackage(packageName: String): Boolean {
@@ -107,10 +115,15 @@ class FocusAccessibilityService : AccessibilityService() {
             Log.d("FocusA11y", "App launching initiated for: $packageName at $lastAllowedLaunchTime")
         }
 
+        @Volatile
+        var lastScreenOffTime: Long = 0L
+            private set
+
         fun turnScreenOff(): Boolean {
             val service = instance
             if (service != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                Log.i("FocusA11y", "Calling performGlobalAction(GLOBAL_ACTION_LOCK_SCREEN)")
+                lastScreenOffTime = SystemClock.uptimeMillis()
+                Log.i("FocusA11y", "Calling performGlobalAction(GLOBAL_ACTION_LOCK_SCREEN) at $lastScreenOffTime")
                 return service.performGlobalAction(GLOBAL_ACTION_LOCK_SCREEN)
             }
             Log.w("FocusA11y", "Cannot turn screen off: instance=$service, sdk=${Build.VERSION.SDK_INT}")
@@ -176,9 +189,32 @@ class FocusAccessibilityService : AccessibilityService() {
         val packageName = event.packageName?.toString() ?: return
         val className = event.className?.toString() ?: ""
 
-        // Never intercept, block, or redirect when a phone call is incoming/ringing or active
+        // 0. If display was turned off within last 2.5s, ignore lock transitions
+        if (SystemClock.uptimeMillis() - lastScreenOffTime < 2500L) {
+            return
+        }
+
+        // 1. If screen is OFF or sleeping (not interactive), NEVER redirect or wake up screen!
+        val powerManager = getSystemService(Context.POWER_SERVICE) as? PowerManager
+        if (powerManager?.isInteractive == false) {
+            return
+        }
+
+        // 2. Never intercept, block, or redirect when a phone call is incoming/ringing or active
         if (isPhoneCallActiveOrRinging() || isPhoneCallPackage(packageName)) {
             Log.d("FocusA11y", "Allowing active/ringing phone call interaction: $packageName ($className)")
+            return
+        }
+
+        // 3. Never intercept OS Lock Screen, Keyguard, or AOD components
+        val lowerPkg = packageName.lowercase(Locale.ROOT)
+        val lowerClass = className.lowercase(Locale.ROOT)
+        if (lowerPkg.contains("keyguard") ||
+            lowerPkg.contains("aod") ||
+            lowerPkg.contains("ambientindication") ||
+            lowerPkg.contains("lockscreen") ||
+            lowerClass.contains("keyguard") ||
+            lowerClass.contains("aod")) {
             return
         }
 

@@ -30,15 +30,19 @@ class FocusLockService : Service() {
     private val screenReceiver = object : android.content.BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.action == Intent.ACTION_SCREEN_ON) {
-                if (FocusLockApp.instance.preferences.isSessionActive()) {
-                    val lockIntent = Intent(context, LockScreenActivity::class.java).apply {
-                        addFlags(
-                            Intent.FLAG_ACTIVITY_NEW_TASK or
-                            Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or
-                            Intent.FLAG_ACTIVITY_SINGLE_TOP
-                        )
+                val pm = context?.getSystemService(Context.POWER_SERVICE) as? android.os.PowerManager
+                if (pm?.isInteractive == true && FocusLockApp.instance.preferences.isSessionActive()) {
+                    val timeSinceLaunch = android.os.SystemClock.uptimeMillis() - FocusAccessibilityService.lastAllowedLaunchTime
+                    if (timeSinceLaunch > 3000L) {
+                        val lockIntent = Intent(context, LockScreenActivity::class.java).apply {
+                            addFlags(
+                                Intent.FLAG_ACTIVITY_NEW_TASK or
+                                Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or
+                                Intent.FLAG_ACTIVITY_SINGLE_TOP
+                            )
+                        }
+                        context?.startActivity(lockIntent)
                     }
-                    context?.startActivity(lockIntent)
                 }
             }
         }

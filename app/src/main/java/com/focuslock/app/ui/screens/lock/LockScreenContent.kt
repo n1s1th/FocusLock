@@ -195,7 +195,7 @@ fun LockScreenContent(
         while (true) {
             delay(1000L)
             val elapsed = System.currentTimeMillis() - lastInteractionTime
-            if (!isAmbientMode && elapsed >= 6000L) {
+            if (!isAmbientMode && elapsed >= 10000L) {
                 isAmbientMode = true
             }
             // If Always On Display is disabled, physically turn off the display after 30 seconds of inactivity
@@ -266,79 +266,60 @@ fun LockScreenContent(
         }
     }
 
-    // Infinite live floating animations for remaining time displays
+    // Infinite live floating animations for remaining time displays in ambient mode (Lock Screen 2)
     val infiniteTransition = rememberInfiniteTransition(label = "liveTimerFloating")
 
-    // Main timer live gentle breathing oscillation (active mode)
-    val liveTimerFloatY by infiniteTransition.animateFloat(
-        initialValue = -5f,
-        targetValue = 5f,
+    // Main timer floating with increased radius (visible orbital drift exclusively on Lock Screen 2)
+    val ambientTimerFloatY by infiniteTransition.animateFloat(
+        initialValue = -28f,
+        targetValue = 28f,
         animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 3400, easing = FastOutSlowInEasing),
+            animation = tween(durationMillis = 4400, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Reverse
         ),
-        label = "liveTimerFloatY"
+        label = "ambientTimerFloatY"
     )
-    val liveTimerFloatX by infiniteTransition.animateFloat(
-        initialValue = -3f,
-        targetValue = 3f,
+    val ambientTimerFloatX by infiniteTransition.animateFloat(
+        initialValue = -20f,
+        targetValue = 20f,
         animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 4600, easing = FastOutSlowInEasing),
+            animation = tween(durationMillis = 5800, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Reverse
         ),
-        label = "liveTimerFloatX"
-    )
-
-    // Ambient mode extra drift for screen burn-in protection
-    val ambientExtraFloatY by infiniteTransition.animateFloat(
-        initialValue = -8f,
-        targetValue = 8f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 5200, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "ambientExtraFloatY"
-    )
-    val ambientExtraFloatX by infiniteTransition.animateFloat(
-        initialValue = -6f,
-        targetValue = 6f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 6200, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "ambientExtraFloatX"
+        label = "ambientTimerFloatX"
     )
 
+    // Seconds card live counter-phase float for organic fluidity with increased radius
+    val ambientSecFloatY by infiniteTransition.animateFloat(
+        initialValue = 22f,
+        targetValue = -22f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 3800, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "ambientSecFloatY"
+    )
+    val ambientSecFloatX by infiniteTransition.animateFloat(
+        initialValue = 16f,
+        targetValue = -16f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 5000, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "ambientSecFloatX"
+    )
+
+    // ONLY active on Lock Screen 2 (ambient mode). On Lock Screen 1 (active mode with all icons), multiplier is 0 (completely stationary)
     val ambientDriftMultiplier by animateFloatAsState(
         targetValue = if (isAmbientMode) 1f else 0f,
-        animationSpec = tween(600),
+        animationSpec = tween(700, easing = FastOutSlowInEasing),
         label = "ambientDriftMultiplier"
     )
 
-    val mainTimerFloatX = liveTimerFloatX + (ambientExtraFloatX * ambientDriftMultiplier)
-    val mainTimerFloatY = liveTimerFloatY + (ambientExtraFloatY * ambientDriftMultiplier)
-
-    // Seconds card live counter-phase float for organic fluidity
-    val secFloatY by infiniteTransition.animateFloat(
-        initialValue = 4f,
-        targetValue = -4f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 3000, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "secFloatY"
-    )
-    val secFloatX by infiniteTransition.animateFloat(
-        initialValue = 2.5f,
-        targetValue = -2.5f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 4200, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "secFloatX"
-    )
-    val secTimerFloatX = secFloatX + (ambientExtraFloatX * ambientDriftMultiplier)
-    val secTimerFloatY = secFloatY + (ambientExtraFloatY * ambientDriftMultiplier)
+    val mainTimerFloatX = ambientTimerFloatX * ambientDriftMultiplier
+    val mainTimerFloatY = ambientTimerFloatY * ambientDriftMultiplier
+    val secTimerFloatX = ambientSecFloatX * ambientDriftMultiplier
+    val secTimerFloatY = ambientSecFloatY * ambientDriftMultiplier
 
     // Smooth fade for non-timing UI elements in ambient mode
     val ambientAlpha by animateFloatAsState(
@@ -392,6 +373,7 @@ fun LockScreenContent(
                 modifier = Modifier
                     .fillMaxSize()
                     .zIndex(999f)
+                    .background(Color.Transparent)
                     .pointerInput(Unit) {
                         awaitPointerEventScope {
                             while (true) {
