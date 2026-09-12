@@ -77,6 +77,10 @@ class FocusAccessibilityService : AccessibilityService() {
     }
 
     companion object {
+        @Volatile
+        var instance: FocusAccessibilityService? = null
+            private set
+
         var isServiceRunning: Boolean = false
             private set
 
@@ -102,6 +106,16 @@ class FocusAccessibilityService : AccessibilityService() {
             lastAllowedLaunchTime = SystemClock.uptimeMillis()
             Log.d("FocusA11y", "App launching initiated for: $packageName at $lastAllowedLaunchTime")
         }
+
+        fun turnScreenOff(): Boolean {
+            val service = instance
+            if (service != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                Log.i("FocusA11y", "Calling performGlobalAction(GLOBAL_ACTION_LOCK_SCREEN)")
+                return service.performGlobalAction(GLOBAL_ACTION_LOCK_SCREEN)
+            }
+            Log.w("FocusA11y", "Cannot turn screen off: instance=$service, sdk=${Build.VERSION.SDK_INT}")
+            return false
+        }
     }
 
     private var defaultLauncherPackage: String? = null
@@ -124,13 +138,24 @@ class FocusAccessibilityService : AccessibilityService() {
 
     override fun onServiceConnected() {
         super.onServiceConnected()
+        instance = this
         isServiceRunning = true
         refreshAllowedPackages()
     }
 
     override fun onDestroy() {
         super.onDestroy()
+        if (instance == this) {
+            instance = null
+        }
         isServiceRunning = false
+    }
+
+    override fun onUnbind(intent: Intent?): Boolean {
+        if (instance == this) {
+            instance = null
+        }
+        return super.onUnbind(intent)
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {

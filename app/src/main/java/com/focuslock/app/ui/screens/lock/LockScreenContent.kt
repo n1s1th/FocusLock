@@ -56,9 +56,13 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -139,11 +143,37 @@ fun LockScreenContent(
     // Screensaver / Ambient Floating Mode State
     var isAmbientMode by remember { mutableStateOf(false) }
     var lastInteractionTime by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    var screenTurnedOffByInactivity by remember { mutableStateOf(false) }
 
     val activity = context as? Activity
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    // Reset inactivity timer and restore brightness whenever the screen turns on / activity resumes
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                lastInteractionTime = System.currentTimeMillis()
+                screenTurnedOffByInactivity = false
+                if (!app.preferences.isAlwaysOnDisplayEnabled()) {
+                    activity?.window?.let { w ->
+                        val lp = w.attributes
+                        if (lp.screenBrightness != WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE) {
+                            lp.screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
+                            w.attributes = lp
+                        }
+                    }
+                }
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
 
     fun registerUserInteraction() {
         lastInteractionTime = System.currentTimeMillis()
+        screenTurnedOffByInactivity = false
         if (isAmbientMode) {
             isAmbientMode = false
         }
@@ -168,13 +198,18 @@ fun LockScreenContent(
             if (!isAmbientMode && elapsed >= 6000L) {
                 isAmbientMode = true
             }
-            // If Always On Display is disabled, turn off / dim screen after 30 seconds of inactivity
-            if (!app.preferences.isAlwaysOnDisplayEnabled() && elapsed >= 30000L) {
-                activity?.window?.let { w ->
-                    val lp = w.attributes
-                    if (lp.screenBrightness != 0.0f) {
-                        lp.screenBrightness = 0.0f
-                        w.attributes = lp
+            // If Always On Display is disabled, physically turn off the display after 30 seconds of inactivity
+            if (!app.preferences.isAlwaysOnDisplayEnabled() && elapsed >= 30000L && !screenTurnedOffByInactivity) {
+                screenTurnedOffByInactivity = true
+                val turnedOff = FocusAccessibilityService.turnScreenOff()
+                if (!turnedOff) {
+                    // Fallback dimming if accessibility service is unavailable
+                    activity?.window?.let { w ->
+                        val lp = w.attributes
+                        if (lp.screenBrightness != 0.0f) {
+                            lp.screenBrightness = 0.0f
+                            w.attributes = lp
+                        }
                     }
                 }
             }
@@ -339,7 +374,7 @@ fun LockScreenContent(
                     while (true) {
                         val event = awaitPointerEvent(PointerEventPass.Initial)
                         if (event.changes.any { it.pressed }) {
-                            lastInteractionTime = System.currentTimeMillis()
+                            registerUserInteraction()
                         }
                     }
                 }

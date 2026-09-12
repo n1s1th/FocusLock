@@ -48,6 +48,12 @@ class LockScreenActivity : ComponentActivity() {
         updateAodFlags()
     }
 
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        updateAodFlags()
+    }
+
     private fun updateAodFlags() {
         val aod = com.focuslock.app.FocusLockApp.instance.preferences.isAlwaysOnDisplayEnabled()
         if (aod) {
