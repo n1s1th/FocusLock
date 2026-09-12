@@ -8,6 +8,7 @@ import android.net.Uri
 import android.os.Build
 import android.util.Log
 import android.view.HapticFeedbackConstants
+import android.view.WindowManager
 import com.focuslock.app.service.FocusAccessibilityService
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -25,6 +26,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -138,20 +140,43 @@ fun LockScreenContent(
     var isAmbientMode by remember { mutableStateOf(false) }
     var lastInteractionTime by remember { mutableLongStateOf(System.currentTimeMillis()) }
 
+    val activity = context as? Activity
+
     fun registerUserInteraction() {
         lastInteractionTime = System.currentTimeMillis()
         if (isAmbientMode) {
             isAmbientMode = false
         }
+        // Restore screen brightness if dimmed due to 30s timeout
+        if (!app.preferences.isAlwaysOnDisplayEnabled()) {
+            activity?.window?.let { w ->
+                val lp = w.attributes
+                if (lp.screenBrightness != WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE) {
+                    lp.screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
+                    w.attributes = lp
+                }
+            }
+        }
     }
 
-    // Inactivity detection: after 6 seconds of no touch, smoothly enter ambient mode
+    // Inactivity detection & 30-second screen timeout
     LaunchedEffect(isAmbientMode, isSessionCompleted) {
         if (isSessionCompleted) return@LaunchedEffect
         while (true) {
             delay(1000L)
-            if (!isAmbientMode && (System.currentTimeMillis() - lastInteractionTime >= 6000L)) {
+            val elapsed = System.currentTimeMillis() - lastInteractionTime
+            if (!isAmbientMode && elapsed >= 6000L) {
                 isAmbientMode = true
+            }
+            // If Always On Display is disabled, turn off / dim screen after 30 seconds of inactivity
+            if (!app.preferences.isAlwaysOnDisplayEnabled() && elapsed >= 30000L) {
+                activity?.window?.let { w ->
+                    val lp = w.attributes
+                    if (lp.screenBrightness != 0.0f) {
+                        lp.screenBrightness = 0.0f
+                        w.attributes = lp
+                    }
+                }
             }
         }
     }
@@ -206,37 +231,79 @@ fun LockScreenContent(
         }
     }
 
-    // Ambient floating animations
-    val infiniteTransition = rememberInfiniteTransition(label = "ambientFloating")
-    val floatY by infiniteTransition.animateFloat(
-        initialValue = -10f,
-        targetValue = 10f,
+    // Infinite live floating animations for remaining time displays
+    val infiniteTransition = rememberInfiniteTransition(label = "liveTimerFloating")
+
+    // Main timer live gentle breathing oscillation (active mode)
+    val liveTimerFloatY by infiniteTransition.animateFloat(
+        initialValue = -5f,
+        targetValue = 5f,
         animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 3600, easing = FastOutSlowInEasing),
+            animation = tween(durationMillis = 3400, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Reverse
         ),
-        label = "floatY"
+        label = "liveTimerFloatY"
     )
-    val floatX by infiniteTransition.animateFloat(
+    val liveTimerFloatX by infiniteTransition.animateFloat(
+        initialValue = -3f,
+        targetValue = 3f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 4600, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "liveTimerFloatX"
+    )
+
+    // Ambient mode extra drift for screen burn-in protection
+    val ambientExtraFloatY by infiniteTransition.animateFloat(
+        initialValue = -8f,
+        targetValue = 8f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 5200, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "ambientExtraFloatY"
+    )
+    val ambientExtraFloatX by infiniteTransition.animateFloat(
         initialValue = -6f,
         targetValue = 6f,
         animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 4800, easing = FastOutSlowInEasing),
+            animation = tween(durationMillis = 6200, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Reverse
         ),
-        label = "floatX"
+        label = "ambientExtraFloatX"
     )
 
-    val animFloatX by animateFloatAsState(
-        targetValue = if (isAmbientMode) floatX else 0f,
-        animationSpec = tween(500),
-        label = "animFloatX"
+    val ambientDriftMultiplier by animateFloatAsState(
+        targetValue = if (isAmbientMode) 1f else 0f,
+        animationSpec = tween(600),
+        label = "ambientDriftMultiplier"
     )
-    val animFloatY by animateFloatAsState(
-        targetValue = if (isAmbientMode) floatY else 0f,
-        animationSpec = tween(500),
-        label = "animFloatY"
+
+    val mainTimerFloatX = liveTimerFloatX + (ambientExtraFloatX * ambientDriftMultiplier)
+    val mainTimerFloatY = liveTimerFloatY + (ambientExtraFloatY * ambientDriftMultiplier)
+
+    // Seconds card live counter-phase float for organic fluidity
+    val secFloatY by infiniteTransition.animateFloat(
+        initialValue = 4f,
+        targetValue = -4f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 3000, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "secFloatY"
     )
+    val secFloatX by infiniteTransition.animateFloat(
+        initialValue = 2.5f,
+        targetValue = -2.5f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 4200, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "secFloatX"
+    )
+    val secTimerFloatX = secFloatX + (ambientExtraFloatX * ambientDriftMultiplier)
+    val secTimerFloatY = secFloatY + (ambientExtraFloatY * ambientDriftMultiplier)
 
     // Smooth fade for non-timing UI elements in ambient mode
     val ambientAlpha by animateFloatAsState(
@@ -295,10 +362,7 @@ fun LockScreenContent(
                             while (true) {
                                 val event = awaitPointerEvent(PointerEventPass.Initial)
                                 event.changes.forEach { it.consume() }
-                                if (event.changes.any { it.pressed }) {
-                                    lastInteractionTime = System.currentTimeMillis()
-                                    isAmbientMode = false
-                                }
+                                registerUserInteraction()
                             }
                         }
                     }
@@ -340,8 +404,8 @@ fun LockScreenContent(
                     .fillMaxWidth()
                     .height(clockCardHeight)
                     .graphicsLayer {
-                        translationX = animFloatX
-                        translationY = animFloatY
+                        translationX = mainTimerFloatX
+                        translationY = mainTimerFloatY
                     },
                 shape = RoundedCornerShape(26.dp),
                 colors = CardDefaults.cardColors(containerColor = timerCardBg),
@@ -382,8 +446,8 @@ fun LockScreenContent(
                             .fillMaxWidth()
                             .height(secCardHeight)
                             .graphicsLayer {
-                                translationX = animFloatX
-                                translationY = animFloatY
+                                translationX = secTimerFloatX
+                                translationY = secTimerFloatY
                             },
                         shape = RoundedCornerShape(22.dp),
                         colors = CardDefaults.cardColors(containerColor = timerCardBg),

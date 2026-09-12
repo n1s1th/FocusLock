@@ -49,6 +49,12 @@ class AppPreferences(context: Context) {
 
     fun isHapticsEnabled(): Boolean = prefs.getBoolean(KEY_HAPTICS_ENABLED, true)
 
+    fun isAlwaysOnDisplayEnabled(): Boolean = prefs.getBoolean(KEY_ALWAYS_ON_DISPLAY, false)
+
+    fun setAlwaysOnDisplayEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_ALWAYS_ON_DISPLAY, enabled).apply()
+    }
+
     fun getCurrentStreak(): Int = prefs.getInt(KEY_CURRENT_STREAK, 0)
 
     fun getLastActiveDate(): String = prefs.getString(KEY_LAST_ACTIVE_DATE, "") ?: ""
@@ -303,6 +309,7 @@ class AppPreferences(context: Context) {
         private const val KEY_BLOCK_RECENTS = "block_recents"
         private const val KEY_BLOCK_SHADE = "block_shade"
         private const val KEY_HAPTICS_ENABLED = "haptics_enabled"
+        private const val KEY_ALWAYS_ON_DISPLAY = "always_on_display"
         private const val KEY_CURRENT_STREAK = "current_streak"
         private const val KEY_LAST_ACTIVE_DATE = "last_active_date"
         private const val KEY_ONBOARDING_COMPLETED = "onboarding_completed"

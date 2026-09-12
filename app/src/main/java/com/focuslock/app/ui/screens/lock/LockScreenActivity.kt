@@ -32,12 +32,28 @@ class LockScreenActivity : ComponentActivity() {
             )
         }
 
+        updateAodFlags()
+
         setContent {
             FocusLockTheme {
                 LockScreenContent(
                     onExitLock = { finish() }
                 )
             }
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        updateAodFlags()
+    }
+
+    private fun updateAodFlags() {
+        val aod = com.focuslock.app.FocusLockApp.instance.preferences.isAlwaysOnDisplayEnabled()
+        if (aod) {
+            window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        } else {
+            window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         }
     }
 

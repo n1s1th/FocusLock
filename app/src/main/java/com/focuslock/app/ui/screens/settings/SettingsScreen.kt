@@ -64,6 +64,8 @@ import com.focuslock.app.ui.theme.SurfaceBright
 import com.focuslock.app.ui.theme.SurfaceVariant
 
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.ui.res.painterResource
+import com.focuslock.app.R
 
 // Fix 10: Settings screen now uses app theme (light, clean) + TopHeaderBar for consistency
 @Composable
@@ -77,6 +79,7 @@ fun SettingsScreen(
     var blockRecents by remember { mutableStateOf(app.preferences.isBlockRecentsEnabled()) }
     var blockShade by remember { mutableStateOf(app.preferences.isBlockShadeEnabled()) }
     var hapticsEnabled by remember { mutableStateOf(app.preferences.isHapticsEnabled()) }
+    var alwaysOnDisplay by remember { mutableStateOf(app.preferences.isAlwaysOnDisplayEnabled()) }
 
     val parachuteCount by app.preferences.parachutesStateFlow.collectAsState()
 
@@ -195,6 +198,19 @@ fun SettingsScreen(
             }
         )
 
+        Spacer(modifier = Modifier.height(12.dp))
+
+        SettingToggleCard(
+            title = "Always On Display (AOD)",
+            subtitle = "Keep screen on while locked. Disabling turns off screen after 30s to save battery",
+            iconRes = R.drawable.ic_display,
+            isChecked = alwaysOnDisplay,
+            onCheckedChange = {
+                alwaysOnDisplay = it
+                app.preferences.setAlwaysOnDisplayEnabled(it)
+            }
+        )
+
         Spacer(modifier = Modifier.height(24.dp))
 
         SectionLabel("SYSTEM PERMISSIONS & PERSISTENCE")
@@ -287,7 +303,8 @@ private fun SectionLabel(text: String) {
 fun SettingToggleCard(
     title: String,
     subtitle: String,
-    icon: ImageVector,
+    icon: ImageVector? = null,
+    iconRes: Int? = null,
     isChecked: Boolean,
     onCheckedChange: (Boolean) -> Unit
 ) {
@@ -314,7 +331,21 @@ fun SettingToggleCard(
                         .background(CharcoalPrimary.copy(alpha = 0.1f)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(imageVector = icon, contentDescription = null, tint = CharcoalPrimary, modifier = Modifier.size(20.dp))
+                    if (iconRes != null) {
+                        Icon(
+                            painter = painterResource(id = iconRes),
+                            contentDescription = null,
+                            tint = CharcoalPrimary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    } else if (icon != null) {
+                        Icon(
+                            imageVector = icon,
+                            contentDescription = null,
+                            tint = CharcoalPrimary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
                 }
                 Spacer(modifier = Modifier.width(12.dp))
                 Column {
