@@ -4,12 +4,15 @@ import android.app.Activity
 import android.app.KeyguardManager
 import android.content.Context
 import android.content.Intent
+import android.media.AudioManager
 import android.net.Uri
 import android.os.Build
 import android.util.Log
 import android.view.HapticFeedbackConstants
+import android.view.KeyEvent
 import android.view.WindowManager
 import com.focuslock.app.service.FocusAccessibilityService
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
@@ -20,6 +23,11 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.ui.graphics.StrokeCap
@@ -649,90 +657,15 @@ fun LockScreenContent(
                         }
                     }
 
-                    // Row of Analog Clock & Spotify Tiles
-                    Row(
+                    // Rotating App Preview / Widget (Clock & Spotify)
+                    RotatingPreviewCard(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(rainCardHeight),
-                        horizontalArrangement = Arrangement.spacedBy(rowGap)
-                    ) {
-                        // 1. Analog Clock Tile (Click redirects to Clock app)
-                        Card(
-                            modifier = Modifier
-                                .weight(1f)
-                                .fillMaxHeight()
-                                .clip(RoundedCornerShape(22.dp))
-                                .clickable {
-                                    if (!isAmbientMode) {
-                                        launchClockApp(context)
-                                    }
-                                },
-                            shape = RoundedCornerShape(22.dp),
-                            colors = CardDefaults.cardColors(containerColor = CardBackgroundDark),
-                            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-                        ) {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .padding(vertical = 6.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.Center
-                            ) {
-                                AnalogClockView(
-                                    modifier = Modifier.size(38.dp)
-                                )
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    text = "CLOCK",
-                                    fontFamily = GoogleSans,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 9.sp,
-                                    color = CardMutedText,
-                                    letterSpacing = 1.2.sp
-                                )
-                            }
-                        }
-
-                        // 2. Spotify Tile (Click redirects to Spotify app)
-                        Card(
-                            modifier = Modifier
-                                .weight(1f)
-                                .fillMaxHeight()
-                                .clip(RoundedCornerShape(22.dp))
-                                .clickable {
-                                    if (!isAmbientMode) {
-                                        launchSpotifyApp(context)
-                                    }
-                                },
-                            shape = RoundedCornerShape(22.dp),
-                            colors = CardDefaults.cardColors(containerColor = CardBackgroundDark),
-                            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-                        ) {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .padding(vertical = 6.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.Center
-                            ) {
-                                Icon(
-                                    painter = painterResource(id = R.drawable.ic_spotify),
-                                    contentDescription = "Spotify",
-                                    tint = Color(0xFF1DB954),
-                                    modifier = Modifier.size(26.dp)
-                                )
-                                Spacer(modifier = Modifier.height(6.dp))
-                                Text(
-                                    text = "SPOTIFY",
-                                    fontFamily = GoogleSans,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 9.sp,
-                                    color = CardMutedText,
-                                    letterSpacing = 1.2.sp
-                                )
-                            }
-                        }
-                    }
+                        isAmbientMode = isAmbientMode,
+                        onOpenClock = { launchClockApp(context) },
+                        onOpenSpotify = { launchSpotifyApp(context) }
+                    )
                 }
             }
 
@@ -1350,19 +1283,378 @@ private fun launchSpotifyApp(context: Context) {
         ?: context.packageManager.getLaunchIntentForPackage("com.spotify.lite")
     if (launchIntent != null) {
         launchAllowedApp(context, launchIntent, launchIntent.`package` ?: spotifyPkg)
-    } else {
-        try {
-            val marketIntent = Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=$spotifyPkg")).apply {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        return
+    }
+
+    // Check if Play Store / Market is available
+    val marketIntent = Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=$spotifyPkg")).apply {
+        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    }
+    val marketResolve = context.packageManager.resolveActivity(marketIntent, 0)
+    if (marketResolve != null) {
+        launchAllowedApp(context, marketIntent, marketResolve.activityInfo.packageName)
+        return
+    }
+
+    // Web fallback
+    try {
+        val webIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://open.spotify.com")).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        val webResolve = context.packageManager.resolveActivity(webIntent, 0)
+        val browserPkg = webResolve?.activityInfo?.packageName ?: "com.android.chrome"
+        launchAllowedApp(context, webIntent, browserPkg)
+    } catch (err: Exception) {
+        Log.e("LockScreen", "Could not launch Spotify web fallback", err)
+    }
+}
+
+private fun sendMediaKeyEvent(context: Context, keyCode: Int) {
+    try {
+        val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager ?: return
+        val downTime = android.os.SystemClock.uptimeMillis()
+        val eventDown = KeyEvent(downTime, downTime, KeyEvent.ACTION_DOWN, keyCode, 0)
+        val eventUp = KeyEvent(downTime, downTime, KeyEvent.ACTION_UP, keyCode, 0)
+        audioManager.dispatchMediaKeyEvent(eventDown)
+        audioManager.dispatchMediaKeyEvent(eventUp)
+    } catch (e: Exception) {
+        Log.e("LockScreen", "Error dispatching media key $keyCode", e)
+    }
+}
+
+@Composable
+private fun RotatingPreviewCard(
+    modifier: Modifier = Modifier,
+    isAmbientMode: Boolean,
+    onOpenClock: () -> Unit,
+    onOpenSpotify: () -> Unit
+) {
+    val context = LocalContext.current
+    var activeWidgetIndex by remember { mutableStateOf(0) } // 0 = Clock, 1 = Spotify
+    var lastUserInteraction by remember { mutableLongStateOf(System.currentTimeMillis()) }
+
+    // Auto-cycle every 6 seconds, pausing if user interacted within the last 10 seconds
+    LaunchedEffect(isAmbientMode) {
+        if (isAmbientMode) return@LaunchedEffect
+        while (true) {
+            delay(1000L)
+            val elapsed = System.currentTimeMillis() - lastUserInteraction
+            if (elapsed >= 6000L) {
+                activeWidgetIndex = (activeWidgetIndex + 1) % 2
+                lastUserInteraction = System.currentTimeMillis()
             }
-            context.startActivity(marketIntent)
-        } catch (e: Exception) {
-            val webIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://open.spotify.com")).apply {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+    }
+
+    Card(
+        modifier = modifier
+            .clip(RoundedCornerShape(22.dp)),
+        shape = RoundedCornerShape(22.dp),
+        colors = CardDefaults.cardColors(containerColor = CardBackgroundDark),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 8.dp, vertical = 6.dp),
+            verticalArrangement = Arrangement.SpaceBetween,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            // Widget Content Container
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth(),
+                contentAlignment = Alignment.Center
+            ) {
+                AnimatedContent(
+                    targetState = activeWidgetIndex,
+                    transitionSpec = {
+                        (slideInHorizontally { width -> width / 2 } + fadeIn(tween(300)))
+                            .togetherWith(slideOutHorizontally { width -> -width / 2 } + fadeOut(tween(300)))
+                    },
+                    label = "WidgetCarousel"
+                ) { targetIndex ->
+                    if (targetIndex == 0) {
+                        ClockWidgetPreview(
+                            onClick = {
+                                if (!isAmbientMode) onOpenClock()
+                            }
+                        )
+                    } else {
+                        SpotifyWidgetPreview(
+                            context = context,
+                            onHeaderClick = {
+                                if (!isAmbientMode) onOpenSpotify()
+                            },
+                            onControlInteraction = {
+                                lastUserInteraction = System.currentTimeMillis()
+                            }
+                        )
+                    }
+                }
             }
-            context.startActivity(webIntent)
+
+            // Indicator Dots / Switcher
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(bottom = 2.dp)
+            ) {
+                repeat(2) { index ->
+                    val isSelected = activeWidgetIndex == index
+                    val dotColor = if (isSelected) AccentOrange else Color(0xFF454341)
+                    val dotWidth = if (isSelected) 14.dp else 6.dp
+                    Box(
+                        modifier = Modifier
+                            .size(width = 28.dp, height = 18.dp)
+                            .clickable {
+                                activeWidgetIndex = index
+                                lastUserInteraction = System.currentTimeMillis()
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .height(3.5.dp)
+                                .width(dotWidth)
+                                .clip(CircleShape)
+                                .background(dotColor)
+                        )
+                    }
+                }
+            }
         }
     }
 }
+
+@Composable
+private fun ClockWidgetPreview(
+    onClick: () -> Unit
+) {
+    var currentTime by remember { mutableStateOf(Calendar.getInstance()) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            currentTime = Calendar.getInstance()
+            delay(1000L)
+        }
+    }
+
+    val hour12 = currentTime.get(Calendar.HOUR).let { if (it == 0) 12 else it }
+    val min = currentTime.get(Calendar.MINUTE)
+    val amPm = if (currentTime.get(Calendar.AM_PM) == Calendar.AM) "AM" else "PM"
+    val timeStr = String.format(Locale.getDefault(), "%d:%02d", hour12, min)
+    val dayDateStr = SimpleDateFormat("EEE, MMM d", Locale.getDefault()).format(currentTime.time).uppercase()
+
+    Row(
+        modifier = Modifier
+            .fillMaxSize()
+            .clip(RoundedCornerShape(16.dp))
+            .clickable {
+                Log.d("LockScreen", "Clock widget clicked")
+                onClick()
+            }
+            .padding(horizontal = 6.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceEvenly
+    ) {
+        // Left: Live ticking Analog Clock face
+        AnalogClockView(
+            modifier = Modifier.size(50.dp)
+        )
+
+        // Right: Clear Digital Time & Date
+        Column(
+            horizontalAlignment = Alignment.Start,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Row(verticalAlignment = Alignment.Bottom) {
+                Text(
+                    text = timeStr,
+                    fontFamily = GoogleSans,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 19.sp,
+                    color = Color.White
+                )
+                Spacer(modifier = Modifier.width(3.dp))
+                Text(
+                    text = amPm,
+                    fontFamily = GoogleSans,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 10.sp,
+                    color = AccentOrange,
+                    modifier = Modifier.padding(bottom = 2.dp)
+                )
+            }
+
+            Text(
+                text = dayDateStr,
+                fontFamily = GoogleSans,
+                fontWeight = FontWeight.Medium,
+                fontSize = 9.sp,
+                color = CardMutedText,
+                letterSpacing = 0.5.sp
+            )
+
+            Spacer(modifier = Modifier.height(2.dp))
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(4.dp)
+                        .clip(CircleShape)
+                        .background(AccentOrange)
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    text = "CLOCK",
+                    fontFamily = GoogleSans,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 8.sp,
+                    color = CardMutedText,
+                    letterSpacing = 1.sp
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SpotifyWidgetPreview(
+    context: Context,
+    onHeaderClick: () -> Unit,
+    onControlInteraction: () -> Unit
+) {
+    val audioManager = remember { context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager }
+    var isMusicPlaying by remember { mutableStateOf(audioManager?.isMusicActive == true) }
+
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(1000L)
+            isMusicPlaying = audioManager?.isMusicActive == true
+        }
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .clip(RoundedCornerShape(16.dp))
+            .clickable {
+                Log.d("LockScreen", "Spotify widget clicked")
+                onHeaderClick()
+            }
+            .padding(horizontal = 6.dp, vertical = 2.dp),
+        verticalArrangement = Arrangement.SpaceBetween,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        // 1. Header: Spotify logo + title + launch shortcut icon
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 4.dp, vertical = 2.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(5.dp)
+            ) {
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_spotify),
+                    contentDescription = "Spotify",
+                    tint = Color(0xFF1DB954),
+                    modifier = Modifier.size(16.dp)
+                )
+                Text(
+                    text = "Spotify",
+                    fontFamily = GoogleSans,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 12.sp,
+                    color = Color.White
+                )
+            }
+
+            Icon(
+                painter = painterResource(id = R.drawable.ic_open_in_new),
+                contentDescription = "Open Spotify",
+                tint = CardMutedText,
+                modifier = Modifier.size(12.dp)
+            )
+        }
+
+        // 2. Playback Controls Row: Prev, Play/Pause, Next
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 2.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Previous Track
+            Box(
+                modifier = Modifier
+                    .size(32.dp)
+                    .clip(CircleShape)
+                    .background(Color(0xFF262422))
+                    .clickable {
+                        onControlInteraction()
+                        sendMediaKeyEvent(context, KeyEvent.KEYCODE_MEDIA_PREVIOUS)
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_skip_previous),
+                    contentDescription = "Previous",
+                    tint = Color.White,
+                    modifier = Modifier.size(15.dp)
+                )
+            }
+
+            // Play / Pause Toggle Button
+            Box(
+                modifier = Modifier
+                    .size(38.dp)
+                    .clip(CircleShape)
+                    .background(Color(0xFF1DB954))
+                    .clickable {
+                        onControlInteraction()
+                        sendMediaKeyEvent(context, KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE)
+                        isMusicPlaying = !isMusicPlaying
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    painter = painterResource(
+                        id = if (isMusicPlaying) R.drawable.ic_pause else R.drawable.ic_play
+                    ),
+                    contentDescription = if (isMusicPlaying) "Pause" else "Play",
+                    tint = Color.Black,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+
+            // Next Track
+            Box(
+                modifier = Modifier
+                    .size(32.dp)
+                    .clip(CircleShape)
+                    .background(Color(0xFF262422))
+                    .clickable {
+                        onControlInteraction()
+                        sendMediaKeyEvent(context, KeyEvent.KEYCODE_MEDIA_NEXT)
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_skip_next),
+                    contentDescription = "Next",
+                    tint = Color.White,
+                    modifier = Modifier.size(15.dp)
+                )
+            }
+        }
+    }
+}
+
 
 
