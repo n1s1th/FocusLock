@@ -22,6 +22,9 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import java.util.Calendar
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -650,55 +653,87 @@ fun LockScreenContent(
                         }
                     }
 
-                    // Ambient Rain / Focus Sound Tile
-                    Card(
+                    // Row of Analog Clock & Spotify Tiles
+                    Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(rainCardHeight),
-                        shape = RoundedCornerShape(22.dp),
-                        colors = CardDefaults.cardColors(containerColor = CardBackgroundDark),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+                        horizontalArrangement = Arrangement.spacedBy(rowGap)
                     ) {
-                        Column(
+                        // 1. Analog Clock Tile (Click redirects to Clock app)
+                        Card(
                             modifier = Modifier
-                                .fillMaxSize()
-                                .padding(vertical = 6.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center
+                                .weight(1f)
+                                .fillMaxHeight()
+                                .clip(RoundedCornerShape(22.dp))
+                                .clickable {
+                                    if (!isAmbientMode) {
+                                        launchClockApp(context)
+                                    }
+                                },
+                            shape = RoundedCornerShape(22.dp),
+                            colors = CardDefaults.cardColors(containerColor = CardBackgroundDark),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                         ) {
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(3.dp),
-                                verticalAlignment = Alignment.CenterVertically
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(vertical = 6.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center
                             ) {
-                                repeat(4) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(3.5.dp)
-                                            .background(CardMutedText)
-                                    )
-                                }
+                                AnalogClockView(
+                                    modifier = Modifier.size(38.dp)
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = "CLOCK",
+                                    fontFamily = GoogleSans,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 9.sp,
+                                    color = CardMutedText,
+                                    letterSpacing = 1.2.sp
+                                )
                             }
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = "RAIN",
-                                fontFamily = GoogleSans,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 11.sp,
-                                color = CardMutedText,
-                                letterSpacing = 1.5.sp
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(3.dp),
-                                verticalAlignment = Alignment.CenterVertically
+                        }
+
+                        // 2. Spotify Tile (Click redirects to Spotify app)
+                        Card(
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxHeight()
+                                .clip(RoundedCornerShape(22.dp))
+                                .clickable {
+                                    if (!isAmbientMode) {
+                                        launchSpotifyApp(context)
+                                    }
+                                },
+                            shape = RoundedCornerShape(22.dp),
+                            colors = CardDefaults.cardColors(containerColor = CardBackgroundDark),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(vertical = 6.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center
                             ) {
-                                repeat(4) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(3.5.dp)
-                                            .background(CardMutedText)
-                                    )
-                                }
+                                Icon(
+                                    painter = painterResource(id = R.drawable.ic_spotify),
+                                    contentDescription = "Spotify",
+                                    tint = Color(0xFF1DB954),
+                                    modifier = Modifier.size(26.dp)
+                                )
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Text(
+                                    text = "SPOTIFY",
+                                    fontFamily = GoogleSans,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 9.sp,
+                                    color = CardMutedText,
+                                    letterSpacing = 1.2.sp
+                                )
                             }
                         }
                     }

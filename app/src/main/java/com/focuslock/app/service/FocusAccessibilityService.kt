@@ -73,6 +73,22 @@ class FocusAccessibilityService : AccessibilityService() {
                 lower.contains("calling")
     }
 
+    private fun isClockPackage(packageName: String): Boolean {
+        val lower = packageName.lowercase(Locale.ROOT)
+        return lower.contains("deskclock") ||
+                lower.contains("alarmclock") ||
+                lower.contains("clockpackage") ||
+                lower == "com.google.android.deskclock" ||
+                lower == "com.android.deskclock" ||
+                lower.contains("com.vivo.clock") ||
+                lower.contains("com.xiaomi.clock")
+    }
+
+    private fun isSpotifyPackage(packageName: String): Boolean {
+        val lower = packageName.lowercase(Locale.ROOT)
+        return lower == "com.spotify.music" || lower == "com.spotify.lite"
+    }
+
     private fun isPhoneCallActiveOrRinging(): Boolean {
         return try {
             val tm = getSystemService(Context.TELEPHONY_SERVICE) as? TelephonyManager
@@ -308,7 +324,10 @@ class FocusAccessibilityService : AccessibilityService() {
         // 0. Phone calls and dialer UI
         if (isPhoneCallActiveOrRinging() || isPhoneCallPackage(packageName)) return true
 
-        // 1. Essential system apps
+        // 1. Clock and Spotify access from lock screen
+        if (isClockPackage(packageName) || isSpotifyPackage(packageName)) return true
+
+        // 2. Essential system apps
         if (systemEssentialPackages.contains(packageName)) return true
 
         // 2. Currently launching allowed app within 3 seconds
