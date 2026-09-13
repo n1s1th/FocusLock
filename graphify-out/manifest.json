@@ -1,0 +1,314 @@
+{
+  "app/build.gradle.kts": {
+    "mtime": 1788454073.6270754,
+    "seen": 1789321355.5347662,
+    "ast_hash": "7d16bae76907ebb56eba79c6899af6be",
+    "semantic_hash": "7d16bae76907ebb56eba79c6899af6be"
+  },
+  "app/src/main/java/com/focuslock/app/FocusLockApp.kt": {
+    "mtime": 1788454235.770997,
+    "seen": 1789321355.5347662,
+    "ast_hash": "bcfc67b96cae095d69914766105e69bc",
+    "semantic_hash": "bcfc67b96cae095d69914766105e69bc"
+  },
+  "app/src/main/java/com/focuslock/app/MainActivity.kt": {
+    "mtime": 1788454946.0141735,
+    "seen": 1789321355.5347662,
+    "ast_hash": "15c1c9fc1d6d3c07a14ededd91773bf4",
+    "semantic_hash": "15c1c9fc1d6d3c07a14ededd91773bf4"
+  },
+  "app/src/main/java/com/focuslock/app/data/database/Converters.kt": {
+    "mtime": 1788454307.4657962,
+    "seen": 1789321355.5347662,
+    "ast_hash": "cb48f7fb2fea3feba1dd265bc923e025",
+    "semantic_hash": "cb48f7fb2fea3feba1dd265bc923e025"
+  },
+  "app/src/main/java/com/focuslock/app/data/database/FocusDatabase.kt": {
+    "mtime": 1788939376.319221,
+    "seen": 1789321355.5347662,
+    "ast_hash": "0efab4105685151f416c54611b8c8152",
+    "semantic_hash": "0efab4105685151f416c54611b8c8152"
+  },
+  "app/src/main/java/com/focuslock/app/data/database/dao/BagDao.kt": {
+    "mtime": 1788979205.296488,
+    "seen": 1789321355.5347662,
+    "ast_hash": "d629c2ee48d9068bfc45977daa1d1946",
+    "semantic_hash": "d629c2ee48d9068bfc45977daa1d1946"
+  },
+  "app/src/main/java/com/focuslock/app/data/database/dao/RoutineDao.kt": {
+    "mtime": 1789224213.1173928,
+    "seen": 1789321355.5347662,
+    "ast_hash": "2aa780587c2395f5f6326ccd8dfdca8f",
+    "semantic_hash": "2aa780587c2395f5f6326ccd8dfdca8f"
+  },
+  "app/src/main/java/com/focuslock/app/data/database/dao/SessionDao.kt": {
+    "mtime": 1788454361.709379,
+    "seen": 1789321355.5347662,
+    "ast_hash": "8890fd460f6288d113c2676de62e9911",
+    "semantic_hash": "8890fd460f6288d113c2676de62e9911"
+  },
+  "app/src/main/java/com/focuslock/app/data/database/entities/BagEntity.kt": {
+    "mtime": 1788454257.9571095,
+    "seen": 1789321355.5347662,
+    "ast_hash": "b0e5e0fc26a555676d23cead16096492",
+    "semantic_hash": "b0e5e0fc26a555676d23cead16096492"
+  },
+  "app/src/main/java/com/focuslock/app/data/database/entities/RoutineEntity.kt": {
+    "mtime": 1788454278.6519923,
+    "seen": 1789321355.5347662,
+    "ast_hash": "8c57ecfc3de8c2f0ddb6913e04f47e31",
+    "semantic_hash": "8c57ecfc3de8c2f0ddb6913e04f47e31"
+  },
+  "app/src/main/java/com/focuslock/app/data/database/entities/SessionEntity.kt": {
+    "mtime": 1788454296.8524067,
+    "seen": 1789321355.5347662,
+    "ast_hash": "3738a971f1965a3add55329140195a64",
+    "semantic_hash": "3738a971f1965a3add55329140195a64"
+  },
+  "app/src/main/java/com/focuslock/app/data/model/InstalledApp.kt": {
+    "mtime": 1788454387.1265295,
+    "seen": 1789321355.5347662,
+    "ast_hash": "7307d59d25eae33051101ba19ea0b698",
+    "semantic_hash": "7307d59d25eae33051101ba19ea0b698"
+  },
+  "app/src/main/java/com/focuslock/app/data/preferences/AppPreferences.kt": {
+    "mtime": 1789220872.9221191,
+    "seen": 1789321355.5347662,
+    "ast_hash": "1472d6b52e774092de5758fd1d3eb687",
+    "semantic_hash": "1472d6b52e774092de5758fd1d3eb687"
+  },
+  "app/src/main/java/com/focuslock/app/service/BootReceiver.kt": {
+    "mtime": 1788454494.8129144,
+    "seen": 1789321355.5347662,
+    "ast_hash": "7849363e379bf29bc8d5c315a7a312e3",
+    "semantic_hash": "7849363e379bf29bc8d5c315a7a312e3"
+  },
+  "app/src/main/java/com/focuslock/app/service/FocusAccessibilityService.kt": {
+    "mtime": 1789317743.2636158,
+    "seen": 1789321355.5347662,
+    "ast_hash": "afbe29fdd99b9a0101b1f1c050d2a944",
+    "semantic_hash": "afbe29fdd99b9a0101b1f1c050d2a944"
+  },
+  "app/src/main/java/com/focuslock/app/service/FocusLockService.kt": {
+    "mtime": 1789225905.4454753,
+    "seen": 1789321355.5347662,
+    "ast_hash": "ee0477360ae1d59198898c71e7fe9c83",
+    "semantic_hash": "ee0477360ae1d59198898c71e7fe9c83"
+  },
+  "app/src/main/java/com/focuslock/app/service/LockWatchdogReceiver.kt": {
+    "mtime": 1788454442.700001,
+    "seen": 1789321355.5347662,
+    "ast_hash": "af4e738bb5adad4df7c0e466d842da15",
+    "semantic_hash": "af4e738bb5adad4df7c0e466d842da15"
+  },
+  "app/src/main/java/com/focuslock/app/service/RoutineAlarmReceiver.kt": {
+    "mtime": 1789110559.351732,
+    "seen": 1789321355.5347662,
+    "ast_hash": "6f5c5ac9374ccf5e668385d85c7fe82d",
+    "semantic_hash": "6f5c5ac9374ccf5e668385d85c7fe82d"
+  },
+  "app/src/main/java/com/focuslock/app/service/RoutineScheduler.kt": {
+    "mtime": 1788942055.0689652,
+    "seen": 1789321355.5347662,
+    "ast_hash": "d2269eec696f7df3f2ce6055d63410ea",
+    "semantic_hash": "d2269eec696f7df3f2ce6055d63410ea"
+  },
+  "app/src/main/java/com/focuslock/app/ui/navigation/AppNavigation.kt": {
+    "mtime": 1789112286.8518505,
+    "seen": 1789321355.5347662,
+    "ast_hash": "6017d994a8d7b90c13b044298d0e2820",
+    "semantic_hash": "6017d994a8d7b90c13b044298d0e2820"
+  },
+  "app/src/main/java/com/focuslock/app/ui/navigation/Screen.kt": {
+    "mtime": 1789111685.2820625,
+    "seen": 1789321355.5347662,
+    "ast_hash": "915c7c6122a03308b1e75623cf3278a6",
+    "semantic_hash": "915c7c6122a03308b1e75623cf3278a6"
+  },
+  "app/src/main/java/com/focuslock/app/ui/screens/bags/AppPickerSheet.kt": {
+    "mtime": 1788980009.4498765,
+    "seen": 1789321355.5347662,
+    "ast_hash": "0341740f866deafdb75bc3629b8930a5",
+    "semantic_hash": "0341740f866deafdb75bc3629b8930a5"
+  },
+  "app/src/main/java/com/focuslock/app/ui/screens/bags/BagsScreen.kt": {
+    "mtime": 1789101506.0843658,
+    "seen": 1789321355.5347662,
+    "ast_hash": "ef19d5cb25826e4af750cda6f8ff0d38",
+    "semantic_hash": "ef19d5cb25826e4af750cda6f8ff0d38"
+  },
+  "app/src/main/java/com/focuslock/app/ui/screens/bags/BagsViewModel.kt": {
+    "mtime": 1789109986.9928322,
+    "seen": 1789321355.5347662,
+    "ast_hash": "44cb4c06d2b0d570aacdb77f6afb5aed",
+    "semantic_hash": "44cb4c06d2b0d570aacdb77f6afb5aed"
+  },
+  "app/src/main/java/com/focuslock/app/ui/screens/bags/components/BagPixelArtView.kt": {
+    "mtime": 1788981455.1493964,
+    "seen": 1789321355.5347662,
+    "ast_hash": "ba012601df23f359baf5e1d91f1d2ec9",
+    "semantic_hash": "ba012601df23f359baf5e1d91f1d2ec9"
+  },
+  "app/src/main/java/com/focuslock/app/ui/screens/home/HomeScreen.kt": {
+    "mtime": 1789101279.9069743,
+    "seen": 1789321355.5347662,
+    "ast_hash": "5c1d6b20d365c5598df4f3b664bdd608",
+    "semantic_hash": "5c1d6b20d365c5598df4f3b664bdd608"
+  },
+  "app/src/main/java/com/focuslock/app/ui/screens/home/HomeViewModel.kt": {
+    "mtime": 1789109947.6660962,
+    "seen": 1789321355.5347662,
+    "ast_hash": "4df03bad51b488610c78bbeb12278efc",
+    "semantic_hash": "4df03bad51b488610c78bbeb12278efc"
+  },
+  "app/src/main/java/com/focuslock/app/ui/screens/home/components/BlockLogoView.kt": {
+    "mtime": 1788934522.2843468,
+    "seen": 1789321355.5347662,
+    "ast_hash": "a4ab7ca537ccea1b55bd41391b5575cd",
+    "semantic_hash": "a4ab7ca537ccea1b55bd41391b5575cd"
+  },
+  "app/src/main/java/com/focuslock/app/ui/screens/home/components/FocusDial.kt": {
+    "mtime": 1788454590.0085237,
+    "seen": 1789321355.5347662,
+    "ast_hash": "1b2cdf47227b84e7f3797673700c71b2",
+    "semantic_hash": "1b2cdf47227b84e7f3797673700c71b2"
+  },
+  "app/src/main/java/com/focuslock/app/ui/screens/home/components/SlideToStart.kt": {
+    "mtime": 1788980028.8886104,
+    "seen": 1789321355.5347662,
+    "ast_hash": "62c69f92596054675add60477e49f4f0",
+    "semantic_hash": "62c69f92596054675add60477e49f4f0"
+  },
+  "app/src/main/java/com/focuslock/app/ui/screens/home/components/SquareNumberDisplay.kt": {
+    "mtime": 1788982380.8175092,
+    "seen": 1789321355.5347662,
+    "ast_hash": "cc8182d2d9c9f4eae0261c7800b93e92",
+    "semantic_hash": "cc8182d2d9c9f4eae0261c7800b93e92"
+  },
+  "app/src/main/java/com/focuslock/app/ui/screens/home/components/TopHeaderBar.kt": {
+    "mtime": 1788935777.039029,
+    "seen": 1789321355.5347662,
+    "ast_hash": "b6397ae81ae7f2ea2715c153c3d730f1",
+    "semantic_hash": "b6397ae81ae7f2ea2715c153c3d730f1"
+  },
+  "app/src/main/java/com/focuslock/app/ui/screens/home/components/VerticalRulerPicker.kt": {
+    "mtime": 1789100552.0607853,
+    "seen": 1789321355.5347662,
+    "ast_hash": "15dad4be1d8b1839bf6a9b45d538ec21",
+    "semantic_hash": "15dad4be1d8b1839bf6a9b45d538ec21"
+  },
+  "app/src/main/java/com/focuslock/app/ui/screens/lock/LockScreenActivity.kt": {
+    "mtime": 1789225814.3565402,
+    "seen": 1789321355.5347662,
+    "ast_hash": "4fa3f51676fcd2e186219d55056c8f0d",
+    "semantic_hash": "4fa3f51676fcd2e186219d55056c8f0d"
+  },
+  "app/src/main/java/com/focuslock/app/ui/screens/lock/LockScreenContent.kt": {
+    "mtime": 1789320085.5929768,
+    "seen": 1789321355.5347662,
+    "ast_hash": "cd106dab20cc853cd7a5081c32825733",
+    "semantic_hash": "cd106dab20cc853cd7a5081c32825733"
+  },
+  "app/src/main/java/com/focuslock/app/ui/screens/lock/components/DonePixelArtView.kt": {
+    "mtime": 1788982343.834782,
+    "seen": 1789321355.5347662,
+    "ast_hash": "331701da75f02edaef453fd4f3f9694a",
+    "semantic_hash": "331701da75f02edaef453fd4f3f9694a"
+  },
+  "app/src/main/java/com/focuslock/app/ui/screens/lock/components/DoneScreenContent.kt": {
+    "mtime": 1789112965.1600351,
+    "seen": 1789321355.5347662,
+    "ast_hash": "4bfa352fe9febc3c712bd07e86ce7f17",
+    "semantic_hash": "4bfa352fe9febc3c712bd07e86ce7f17"
+  },
+  "app/src/main/java/com/focuslock/app/ui/screens/permissions/PermissionsWizardScreen.kt": {
+    "mtime": 1789112854.6758854,
+    "seen": 1789321355.5347662,
+    "ast_hash": "a94b082b4b5f165a3a595c7e5bb0f050",
+    "semantic_hash": "a94b082b4b5f165a3a595c7e5bb0f050"
+  },
+  "app/src/main/java/com/focuslock/app/ui/screens/routines/RoutineEditorDialog.kt": {
+    "mtime": 1788454823.1014824,
+    "seen": 1789321355.5347662,
+    "ast_hash": "0ac036b8b6827f079a00089b604be61f",
+    "semantic_hash": "0ac036b8b6827f079a00089b604be61f"
+  },
+  "app/src/main/java/com/focuslock/app/ui/screens/routines/RoutinesScreen.kt": {
+    "mtime": 1789224416.0714548,
+    "seen": 1789321355.5347662,
+    "ast_hash": "9087749a377564a4b88552314a923196",
+    "semantic_hash": "9087749a377564a4b88552314a923196"
+  },
+  "app/src/main/java/com/focuslock/app/ui/screens/routines/RoutinesViewModel.kt": {
+    "mtime": 1789224237.966607,
+    "seen": 1789321355.5347662,
+    "ast_hash": "1a397e25847f3779054a8c7b4ae34b99",
+    "semantic_hash": "1a397e25847f3779054a8c7b4ae34b99"
+  },
+  "app/src/main/java/com/focuslock/app/ui/screens/settings/SettingsScreen.kt": {
+    "mtime": 1789221039.972586,
+    "seen": 1789321355.5347662,
+    "ast_hash": "f3304aab771779e39bd8a5ec815961ef",
+    "semantic_hash": "f3304aab771779e39bd8a5ec815961ef"
+  },
+  "app/src/main/java/com/focuslock/app/ui/screens/stats/StatsScreen.kt": {
+    "mtime": 1789101303.7157533,
+    "seen": 1789321355.5347662,
+    "ast_hash": "987d2a0368e5fdc2225f0ab680922fa4",
+    "semantic_hash": "987d2a0368e5fdc2225f0ab680922fa4"
+  },
+  "app/src/main/java/com/focuslock/app/ui/screens/stats/StatsViewModel.kt": {
+    "mtime": 1788978906.2249653,
+    "seen": 1789321355.5347662,
+    "ast_hash": "2ae0916e57346d5e0e21f78bedcdcf03",
+    "semantic_hash": "2ae0916e57346d5e0e21f78bedcdcf03"
+  },
+  "app/src/main/java/com/focuslock/app/ui/theme/Color.kt": {
+    "mtime": 1788934426.6022434,
+    "seen": 1789321355.5347662,
+    "ast_hash": "cf5767230d539a42843a96305ad7a256",
+    "semantic_hash": "cf5767230d539a42843a96305ad7a256"
+  },
+  "app/src/main/java/com/focuslock/app/ui/theme/Theme.kt": {
+    "mtime": 1788934470.8735273,
+    "seen": 1789321355.5347662,
+    "ast_hash": "8f236ea18dd29235ea862df5fd2223f4",
+    "semantic_hash": "8f236ea18dd29235ea862df5fd2223f4"
+  },
+  "app/src/main/java/com/focuslock/app/ui/theme/Type.kt": {
+    "mtime": 1788934449.1744497,
+    "seen": 1789321355.5347662,
+    "ast_hash": "f19c272887619961d8bcc85fe636ab3f",
+    "semantic_hash": "f19c272887619961d8bcc85fe636ab3f"
+  },
+  "app/src/main/java/com/focuslock/app/util/PermissionUtils.kt": {
+    "mtime": 1789111606.011821,
+    "seen": 1789321355.5347662,
+    "ast_hash": "74d0268d823f816d18a5dcf4cf5e6603",
+    "semantic_hash": "74d0268d823f816d18a5dcf4cf5e6603"
+  },
+  "build.gradle.kts": {
+    "mtime": 1788454034.274436,
+    "seen": 1789321355.5347662,
+    "ast_hash": "f18c3f5819750d1800ff9c434f0b75bf",
+    "semantic_hash": "f18c3f5819750d1800ff9c434f0b75bf"
+  },
+  "gradlew": {
+    "mtime": 1788455951.540953,
+    "seen": 1789321355.5347662,
+    "ast_hash": "780b1d3e23a3b82154795f73df943a14",
+    "semantic_hash": "780b1d3e23a3b82154795f73df943a14"
+  },
+  "run_detect.py": {
+    "mtime": 1789321243.722178,
+    "seen": 1789321355.5347662,
+    "ast_hash": "b33658b034394efacf430f0ca109aec9",
+    "semantic_hash": "b33658b034394efacf430f0ca109aec9"
+  },
+  "settings.gradle.kts": {
+    "mtime": 1788458435.437292,
+    "seen": 1789321355.5347662,
+    "ast_hash": "ec2c3ebf4b67eaf09f5975ad5c30b684",
+    "semantic_hash": "ec2c3ebf4b67eaf09f5975ad5c30b684"
+  }
+}
