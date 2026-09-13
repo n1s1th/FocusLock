@@ -378,12 +378,8 @@ fun LockScreenContent(
                     .zIndex(999f)
                     .background(Color.Transparent)
                     .pointerInput(Unit) {
-                        awaitPointerEventScope {
-                            while (true) {
-                                val event = awaitPointerEvent(PointerEventPass.Initial)
-                                event.changes.forEach { it.consume() }
-                                registerUserInteraction()
-                            }
+                        detectTapGestures {
+                            registerUserInteraction()
                         }
                     }
             )
@@ -1195,4 +1191,178 @@ private fun Context.findActivity(): Activity? {
     }
     return null
 }
+
+@Composable
+fun AnalogClockView(
+    modifier: Modifier = Modifier
+) {
+    var currentTime by remember { mutableStateOf(Calendar.getInstance()) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            currentTime = Calendar.getInstance()
+            delay(500L)
+        }
+    }
+
+    val hours = currentTime.get(Calendar.HOUR)
+    val minutes = currentTime.get(Calendar.MINUTE)
+    val seconds = currentTime.get(Calendar.SECOND)
+
+    val hourAngle = (hours + minutes / 60f) * 30f
+    val minuteAngle = (minutes + seconds / 60f) * 6f
+    val secondAngle = seconds * 6f
+
+    Canvas(modifier = modifier) {
+        val center = Offset(size.width / 2f, size.height / 2f)
+        val radius = minOf(size.width, size.height) / 2f * 0.9f
+
+        // Outer subtle ring
+        drawCircle(
+            color = CardMutedText.copy(alpha = 0.25f),
+            radius = radius,
+            center = center,
+            style = Stroke(width = 1.5.dp.toPx())
+        )
+
+        // 12 hour ticks
+        for (i in 0 until 12) {
+            val tickAngle = Math.toRadians((i * 30 - 90).toDouble())
+            val isQuarter = i % 3 == 0
+            val tickInnerRadius = if (isQuarter) radius * 0.72f else radius * 0.82f
+            val tickOuterRadius = radius * 0.92f
+            val strokeW = if (isQuarter) 1.8.dp.toPx() else 1.dp.toPx()
+            val tickColor = if (isQuarter) Color.White.copy(alpha = 0.8f) else CardMutedText.copy(alpha = 0.5f)
+
+            val startX = center.x + tickInnerRadius * Math.cos(tickAngle).toFloat()
+            val startY = center.y + tickInnerRadius * Math.sin(tickAngle).toFloat()
+            val endX = center.x + tickOuterRadius * Math.cos(tickAngle).toFloat()
+            val endY = center.y + tickOuterRadius * Math.sin(tickAngle).toFloat()
+
+            drawLine(
+                color = tickColor,
+                start = Offset(startX, startY),
+                end = Offset(endX, endY),
+                strokeWidth = strokeW,
+                cap = StrokeCap.Round
+            )
+        }
+
+        // Hour Hand
+        val hourRad = Math.toRadians((hourAngle - 90).toDouble())
+        val hourLength = radius * 0.52f
+        val hourCos = Math.cos(hourRad).toFloat()
+        val hourSin = Math.sin(hourRad).toFloat()
+        drawLine(
+            color = Color.White,
+            start = Offset(center.x - hourLength * 0.15f * hourCos, center.y - hourLength * 0.15f * hourSin),
+            end = Offset(center.x + hourLength * hourCos, center.y + hourLength * hourSin),
+            strokeWidth = 2.5.dp.toPx(),
+            cap = StrokeCap.Round
+        )
+
+        // Minute Hand
+        val minRad = Math.toRadians((minuteAngle - 90).toDouble())
+        val minLength = radius * 0.74f
+        val minCos = Math.cos(minRad).toFloat()
+        val minSin = Math.sin(minRad).toFloat()
+        drawLine(
+            color = Color.White.copy(alpha = 0.95f),
+            start = Offset(center.x - minLength * 0.15f * minCos, center.y - minLength * 0.15f * minSin),
+            end = Offset(center.x + minLength * minCos, center.y + minLength * minSin),
+            strokeWidth = 1.8.dp.toPx(),
+            cap = StrokeCap.Round
+        )
+
+        // Second Hand (AccentOrange)
+        val secRad = Math.toRadians((secondAngle - 90).toDouble())
+        val secLength = radius * 0.84f
+        val secCos = Math.cos(secRad).toFloat()
+        val secSin = Math.sin(secRad).toFloat()
+        drawLine(
+            color = AccentOrange,
+            start = Offset(center.x - secLength * 0.2f * secCos, center.y - secLength * 0.2f * secSin),
+            end = Offset(center.x + secLength * secCos, center.y + secLength * secSin),
+            strokeWidth = 1.2.dp.toPx(),
+            cap = StrokeCap.Round
+        )
+
+        // Center Pivot Dots
+        drawCircle(
+            color = AccentOrange,
+            radius = 2.2.dp.toPx(),
+            center = center
+        )
+        drawCircle(
+            color = CardBackgroundDark,
+            radius = 1.dp.toPx(),
+            center = center
+        )
+    }
+}
+
+private fun launchClockApp(context: Context) {
+    // 1. Try standard AlarmClock action
+    val clockIntent = Intent(android.provider.AlarmClock.ACTION_SHOW_ALARMS).apply {
+        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    }
+    val resolveInfo = context.packageManager.resolveActivity(clockIntent, 0)
+    if (resolveInfo != null) {
+        val pkg = resolveInfo.activityInfo.packageName
+        launchAllowedApp(context, clockIntent, pkg)
+        return
+    }
+
+    // 2. Try APP_CLOCK category
+    val categoryIntent = Intent(Intent.ACTION_MAIN).apply {
+        addCategory("android.intent.category.APP_CLOCK")
+        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    }
+    val catResolve = context.packageManager.resolveActivity(categoryIntent, 0)
+    if (catResolve != null) {
+        val pkg = catResolve.activityInfo.packageName
+        launchAllowedApp(context, categoryIntent, pkg)
+        return
+    }
+
+    // 3. Fallback to known clock packages
+    val knownClockPackages = listOf(
+        "com.google.android.deskclock",
+        "com.android.deskclock",
+        "com.sec.android.app.clockpackage",
+        "com.coloros.alarmclock",
+        "com.oppo.alarmclock",
+        "com.vivo.clock",
+        "com.xiaomi.clock",
+        "com.oneplus.deskclock"
+    )
+    for (pkg in knownClockPackages) {
+        val launchIntent = context.packageManager.getLaunchIntentForPackage(pkg)
+        if (launchIntent != null) {
+            launchAllowedApp(context, launchIntent, pkg)
+            return
+        }
+    }
+}
+
+private fun launchSpotifyApp(context: Context) {
+    val spotifyPkg = "com.spotify.music"
+    val launchIntent = context.packageManager.getLaunchIntentForPackage(spotifyPkg)
+        ?: context.packageManager.getLaunchIntentForPackage("com.spotify.lite")
+    if (launchIntent != null) {
+        launchAllowedApp(context, launchIntent, launchIntent.`package` ?: spotifyPkg)
+    } else {
+        try {
+            val marketIntent = Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=$spotifyPkg")).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(marketIntent)
+        } catch (e: Exception) {
+            val webIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://open.spotify.com")).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(webIntent)
+        }
+    }
+}
+
 
