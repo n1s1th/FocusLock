@@ -198,7 +198,8 @@ class FocusAccessibilityService : AccessibilityService() {
         // Only enforce distraction blocking on real window state / window hierarchy changes
         val eventType = event.eventType
         if (eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED &&
-            eventType != AccessibilityEvent.TYPE_WINDOWS_CHANGED) {
+            eventType != AccessibilityEvent.TYPE_WINDOWS_CHANGED &&
+            eventType != AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED) {
             return
         }
 
@@ -264,6 +265,11 @@ class FocusAccessibilityService : AccessibilityService() {
         if (now - lastInspectionTime < 150 && packageName == lastBlockedPackage) {
             return
         }
+
+        // Stricter rate limit for content change events (which fire very rapidly)
+        if (eventType == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED && (now - lastInspectionTime < 500)) {
+            return
+        }
         lastInspectionTime = now
 
         // Check against active bag whitelist
@@ -272,7 +278,65 @@ class FocusAccessibilityService : AccessibilityService() {
             Log.d("FocusA11y", "Distraction detected: $packageName - Enforcing Focus Lock")
             app.preferences.incrementDistractionsBlocked()
             redirectToLockOverlay()
+            return
         }
+
+        // If package is allowed but reel blocking is enabled, check for short-form video UI
+        // Only target specific apps that actually have these features to avoid false positives in random apps
+        if (app.preferences.isBlockReelsEnabled()) {
+            val isTargetApp = packageName == "com.instagram.android" ||
+                              packageName == "com.google.android.youtube" ||
+                              packageName == "com.zhiliaoapp.musically" // TikTok
+
+            if (isTargetApp) {
+                val rootNode = rootInActiveWindow
+                if (rootNode != null) {
+                    if (detectReelsInNode(rootNode, packageName)) {
+                        Log.d("FocusA11y", "Reels/Shorts detected in allowed app: $packageName")
+                        app.preferences.incrementDistractionsBlocked()
+                        performGlobalAction(GLOBAL_ACTION_HOME)
+                        redirectToLockOverlay()
+                    }
+                    rootNode.recycle()
+                }
+            }
+        }
+    }
+
+    private fun detectReelsInNode(node: AccessibilityNodeInfo?, packageName: String): Boolean {
+        if (node == null) return false
+
+        val viewId = node.viewIdResourceName ?: ""
+        val contentDesc = node.contentDescription?.toString() ?: ""
+
+        // Use very specific signals to avoid false positives
+        if (packageName == "com.instagram.android") {
+            if (viewId == "com.instagram.android:id/clips_video_container" ||
+                viewId == "com.instagram.android:id/reels_viewer_root" ||
+                contentDesc.equals("Reels", ignoreCase = true)) {
+                return true
+            }
+        } else if (packageName == "com.google.android.youtube") {
+            if (viewId == "com.google.android.youtube:id/reel_player_view" ||
+                viewId == "com.google.android.youtube:id/reel_recycler" ||
+                contentDesc.equals("Shorts", ignoreCase = true)) {
+                return true
+            }
+        } else if (packageName == "com.zhiliaoapp.musically") {
+            // TikTok is entirely short-form video, so if they are in the app, block it
+            return true
+        }
+
+        for (i in 0 until node.childCount) {
+            val child = node.getChild(i)
+            if (detectReelsInNode(child, packageName)) {
+                child?.recycle()
+                return true
+            }
+            child?.recycle()
+        }
+
+        return false
     }
 
     override fun onInterrupt() {
