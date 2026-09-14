@@ -48,6 +48,11 @@ import com.focuslock.app.data.database.entities.BagEntity
 import com.focuslock.app.service.FocusAccessibilityService
 import com.focuslock.app.ui.screens.home.components.BlockLogoView
 import com.focuslock.app.ui.screens.home.components.DigitalTimerDisplay
+import com.focuslock.app.ui.screens.home.components.MainModeSwitch
+import com.focuslock.app.ui.screens.reels.ReelBlockDashboardScreen
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import com.focuslock.app.ui.screens.home.components.SlideToStart
 import com.focuslock.app.ui.screens.home.components.TopHeaderBar
 import com.focuslock.app.ui.screens.home.components.VerticalRulerPicker
@@ -65,6 +70,7 @@ import com.focuslock.app.ui.theme.SurfaceVariant
 fun HomeScreen(
     onNavigateToLock: () -> Unit,
     onNavigateToSettings: () -> Unit = {},
+    onNavigateToAppConfig: (String) -> Unit = {},
     viewModel: HomeViewModel = viewModel()
 ) {
     val context = LocalContext.current
@@ -73,6 +79,7 @@ fun HomeScreen(
     val parachuteCount by viewModel.parachuteCount.collectAsState()
 
     val isAccessibilityOn = FocusAccessibilityService.isServiceRunning
+    var isReelMode by remember { mutableStateOf(false) }
 
     // Fix 4: Use LaunchedEffect to avoid side-effects in composition body
     LaunchedEffect(isSessionActive) {
@@ -98,6 +105,15 @@ fun HomeScreen(
             parachuteCount = parachuteCount,
             onProfileClick = onNavigateToSettings
         )
+
+        MainModeSwitch(
+            isReelMode = isReelMode,
+            onModeChange = { isReelMode = it }
+        )
+
+        if (isReelMode) {
+            ReelBlockDashboardScreen(onAppClick = onNavigateToAppConfig)
+        } else {
 
         // Accessibility Permission Notice (compact if disabled)
         if (!isAccessibilityOn) {
@@ -254,6 +270,7 @@ fun HomeScreen(
             },
             text = "SLIDE TO START"
         )
+        }
     }
 }
 

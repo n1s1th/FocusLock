@@ -24,6 +24,9 @@ class FocusAccessibilityService : AccessibilityService() {
     private var lastInspectionTime = 0L
     private var lastBlockedPackage: String? = null
 
+    // Cache for app configuration to prevent constant database I/O on accessibility events
+    private var reelBlockConfigCache: Map<String, com.focuslock.app.data.database.entities.ReelBlockAppEntity> = emptyMap()
+
     // Essential system packages that must never be blocked (emergency calls, input methods, system UI/permissions)
     private val systemEssentialPackages = setOf(
         "android",
@@ -170,6 +173,14 @@ class FocusAccessibilityService : AccessibilityService() {
         instance = this
         isServiceRunning = true
         refreshAllowedPackages()
+
+        serviceScope.launch {
+            val app = FocusLockApp.instance
+            app.database.reelBlockAppDao().getAllReelBlockApps().collect { apps ->
+                reelBlockConfigCache = apps.associateBy { it.packageName }
+                Log.d("FocusA11y", "Loaded ${apps.size} ReelBlock configurations into cache.")
+            }
+        }
     }
 
     override fun onDestroy() {
@@ -266,7 +277,7 @@ class FocusAccessibilityService : AccessibilityService() {
             return
         }
 
-        // Stricter rate limit for content change events (which fire very rapidly)
+        // Stricter rate limit for content change events
         if (eventType == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED && (now - lastInspectionTime < 500)) {
             return
         }
@@ -281,55 +292,57 @@ class FocusAccessibilityService : AccessibilityService() {
             return
         }
 
-        // If package is allowed but reel blocking is enabled, check for short-form video UI
-        // Only target specific apps that actually have these features to avoid false positives in random apps
-        if (app.preferences.isBlockReelsEnabled()) {
-            val isTargetApp = packageName == "com.instagram.android" ||
-                              packageName == "com.google.android.youtube" ||
-                              packageName == "com.zhiliaoapp.musically" // TikTok
-
-            if (isTargetApp) {
-                val rootNode = rootInActiveWindow
-                if (rootNode != null) {
-                    if (detectReelsInNode(rootNode, packageName)) {
-                        Log.d("FocusA11y", "Reels/Shorts detected in allowed app: $packageName")
-                        app.preferences.incrementDistractionsBlocked()
-                        performGlobalAction(GLOBAL_ACTION_HOME)
-                        redirectToLockOverlay()
-                    }
-                    rootNode.recycle()
+        // Feature Blocker (Reels, Stories, etc.) for allowed apps
+        val appConfig = reelBlockConfigCache[packageName]
+        if (appConfig != null) {
+            val rootNode = rootInActiveWindow
+            if (rootNode != null) {
+                if (detectBlockedFeaturesInNode(rootNode, packageName, appConfig)) {
+                    Log.d("FocusA11y", "Blocked feature detected in: $packageName")
+                    performGlobalAction(GLOBAL_ACTION_HOME)
                 }
+                rootNode.recycle()
             }
         }
     }
 
-    private fun detectReelsInNode(node: AccessibilityNodeInfo?, packageName: String): Boolean {
+    private fun detectBlockedFeaturesInNode(
+        node: AccessibilityNodeInfo?,
+        packageName: String,
+        appConfig: com.focuslock.app.data.database.entities.ReelBlockAppEntity
+    ): Boolean {
         if (node == null) return false
 
         val viewId = node.viewIdResourceName ?: ""
         val contentDesc = node.contentDescription?.toString() ?: ""
 
-        // Use very specific signals to avoid false positives
-        if (packageName == "com.instagram.android") {
-            if (viewId == "com.instagram.android:id/clips_video_container" ||
-                viewId == "com.instagram.android:id/reels_viewer_root" ||
-                contentDesc.equals("Reels", ignoreCase = true)) {
+        if (appConfig.blockReels) {
+            if (packageName == "com.instagram.android") {
+                if (viewId == "com.instagram.android:id/clips_video_container" ||
+                    viewId == "com.instagram.android:id/reels_viewer_root" ||
+                    contentDesc.equals("Reels", ignoreCase = true)) {
+                    return true
+                }
+            } else if (packageName == "com.google.android.youtube") {
+                if (viewId == "com.google.android.youtube:id/reel_player_view" ||
+                    viewId == "com.google.android.youtube:id/reel_recycler" ||
+                    contentDesc.equals("Shorts", ignoreCase = true)) {
+                    return true
+                }
+            } else if (packageName == "com.zhiliaoapp.musically") {
                 return true
             }
-        } else if (packageName == "com.google.android.youtube") {
-            if (viewId == "com.google.android.youtube:id/reel_player_view" ||
-                viewId == "com.google.android.youtube:id/reel_recycler" ||
-                contentDesc.equals("Shorts", ignoreCase = true)) {
-                return true
-            }
-        } else if (packageName == "com.zhiliaoapp.musically") {
-            // TikTok is entirely short-form video, so if they are in the app, block it
-            return true
+        }
+
+        if (appConfig.blockStories) {
+             if (packageName == "com.instagram.android" && contentDesc.contains("story", ignoreCase = true)) {
+                 return true
+             }
         }
 
         for (i in 0 until node.childCount) {
             val child = node.getChild(i)
-            if (detectReelsInNode(child, packageName)) {
+            if (detectBlockedFeaturesInNode(child, packageName, appConfig)) {
                 child?.recycle()
                 return true
             }
