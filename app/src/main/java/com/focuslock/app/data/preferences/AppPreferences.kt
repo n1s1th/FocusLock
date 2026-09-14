@@ -47,6 +47,12 @@ class AppPreferences(context: Context) {
 
     fun isBlockShadeEnabled(): Boolean = prefs.getBoolean(KEY_BLOCK_SHADE, true)
 
+    fun isBlockReelsEnabled(): Boolean = prefs.getBoolean(KEY_BLOCK_REELS, false)
+
+    fun setBlockReels(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_BLOCK_REELS, enabled).apply()
+    }
+
     fun isHapticsEnabled(): Boolean = prefs.getBoolean(KEY_HAPTICS_ENABLED, true)
 
     fun isAlwaysOnDisplayEnabled(): Boolean = prefs.getBoolean(KEY_ALWAYS_ON_DISPLAY, false)
@@ -308,6 +314,7 @@ class AppPreferences(context: Context) {
         private const val KEY_DISTRACTIONS_BLOCKED = "distractions_blocked"
         private const val KEY_BLOCK_RECENTS = "block_recents"
         private const val KEY_BLOCK_SHADE = "block_shade"
+        private const val KEY_BLOCK_REELS = "block_reels"
         private const val KEY_HAPTICS_ENABLED = "haptics_enabled"
         private const val KEY_ALWAYS_ON_DISPLAY = "always_on_display"
         private const val KEY_CURRENT_STREAK = "current_streak"
