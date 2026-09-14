@@ -47,6 +47,9 @@ import com.focuslock.app.ui.theme.CharcoalPrimary
 import com.focuslock.app.ui.theme.ScreenBackground
 import com.focuslock.app.ui.theme.SurfaceBright
 import kotlinx.coroutines.launch
+import com.focuslock.app.ui.screens.reels.AppFeatureBlockScreen
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
 
 @Composable
 fun AppNavigation() {
@@ -80,6 +83,9 @@ fun AppNavigation() {
                 },
                 onNavigateToSettings = {
                     navController.navigate(Screen.Settings.route)
+                },
+                onNavigateToAppConfig = { packageName ->
+                    navController.navigate(Screen.ReelAppConfig.createRoute(packageName))
                 }
             )
         }
@@ -91,13 +97,26 @@ fun AppNavigation() {
                 }
             )
         }
+        composable(
+            route = Screen.ReelAppConfig.route,
+            arguments = listOf(navArgument("packageName") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val packageName = backStackEntry.arguments?.getString("packageName") ?: return@composable
+            // We pass the package name down. The screen itself will load the DB entity.
+            // For now, we will create a wrapper inside AppFeatureBlockScreen to load the entity.
+            com.focuslock.app.ui.screens.reels.AppFeatureBlockScreenLoader(
+                packageName = packageName,
+                onBack = { navController.popBackStack() }
+            )
+        }
     }
 }
 
 @Composable
 fun MainPagerScreen(
     onNavigateToLock: () -> Unit,
-    onNavigateToSettings: () -> Unit
+    onNavigateToSettings: () -> Unit,
+    onNavigateToAppConfig: (String) -> Unit
 ) {
     val navItems = listOf(
         Screen.Home,
@@ -198,7 +217,8 @@ fun MainPagerScreen(
             when (page) {
                 0 -> HomeScreen(
                     onNavigateToLock = onNavigateToLock,
-                    onNavigateToSettings = onNavigateToSettings
+                    onNavigateToSettings = onNavigateToSettings,
+                    onNavigateToAppConfig = onNavigateToAppConfig
                 )
                 1 -> BagsScreen(
                     onNavigateToSettings = onNavigateToSettings

@@ -10,4 +10,7 @@ sealed class Screen(val route: String, val title: String, @DrawableRes val iconR
     object Stats : Screen("stats", "Analytics", R.drawable.ic_navigation_stats)
     object Settings : Screen("settings", "Settings", R.drawable.ic_account)
     object PermissionsWizard : Screen("permissions_wizard", "Permissions", R.drawable.ic_account)
+    object ReelAppConfig : Screen("reel_app_config/{packageName}", "Configure", R.drawable.ic_account) {
+        fun createRoute(packageName: String) = "reel_app_config/$packageName"
+    }
 }

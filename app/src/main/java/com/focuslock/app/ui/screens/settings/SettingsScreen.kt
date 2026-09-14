@@ -29,7 +29,6 @@ import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.NotificationsOff
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Vibration
-import androidx.compose.material.icons.filled.VideoLibrary
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -79,7 +78,6 @@ fun SettingsScreen(
 
     var blockRecents by remember { mutableStateOf(app.preferences.isBlockRecentsEnabled()) }
     var blockShade by remember { mutableStateOf(app.preferences.isBlockShadeEnabled()) }
-    var blockReels by remember { mutableStateOf(app.preferences.isBlockReelsEnabled()) }
     var hapticsEnabled by remember { mutableStateOf(app.preferences.isHapticsEnabled()) }
     var alwaysOnDisplay by remember { mutableStateOf(app.preferences.isAlwaysOnDisplayEnabled()) }
 
@@ -171,19 +169,6 @@ fun SettingsScreen(
             onCheckedChange = {
                 blockRecents = it
                 app.preferences.setBlockRecents(it)
-            }
-        )
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        SettingToggleCard(
-            title = "Block Short-Form Videos",
-            subtitle = "Detects and blocks Reels & Shorts inside other apps",
-            icon = Icons.Default.VideoLibrary,
-            isChecked = blockReels,
-            onCheckedChange = {
-                blockReels = it
-                app.preferences.setBlockReels(it)
             }
         )
 
