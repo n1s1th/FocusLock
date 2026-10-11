@@ -159,21 +159,31 @@ fun LockScreenContent(
     val activity = context as? Activity
     val lifecycleOwner = LocalLifecycleOwner.current
 
-    // Reset inactivity timer and restore brightness whenever the screen turns on / activity resumes
+    // Inactivity detection & 30-second screen timeout (ONLY active when LockScreen is resumed/foreground)
+    var isLockScreenResumed by remember { mutableStateOf(true) }
+
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) {
-                lastInteractionTime = System.currentTimeMillis()
-                screenTurnedOffByInactivity = false
-                if (!app.preferences.isAlwaysOnDisplayEnabled()) {
-                    activity?.window?.let { w ->
-                        val lp = w.attributes
-                        if (lp.screenBrightness != WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE) {
-                            lp.screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
-                            w.attributes = lp
+            when (event) {
+                Lifecycle.Event.ON_RESUME -> {
+                    isLockScreenResumed = true
+                    lastInteractionTime = System.currentTimeMillis()
+                    screenTurnedOffByInactivity = false
+                    if (!app.preferences.isAlwaysOnDisplayEnabled()) {
+                        activity?.window?.let { w ->
+                            val lp = w.attributes
+                            if (lp.screenBrightness != WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE) {
+                                lp.screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
+                                w.attributes = lp
+                            }
                         }
                     }
                 }
+                Lifecycle.Event.ON_PAUSE, Lifecycle.Event.ON_STOP -> {
+                    isLockScreenResumed = false
+                    screenTurnedOffByInactivity = false
+                }
+                else -> {}
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -201,15 +211,16 @@ fun LockScreenContent(
     }
 
     // Inactivity detection & 30-second screen timeout
-    LaunchedEffect(isAmbientMode, isSessionCompleted) {
-        if (isSessionCompleted) return@LaunchedEffect
-        while (true) {
+    LaunchedEffect(isAmbientMode, isSessionCompleted, isLockScreenResumed) {
+        if (isSessionCompleted || !isLockScreenResumed) return@LaunchedEffect
+        while (isLockScreenResumed) {
             delay(1000L)
+            if (!isLockScreenResumed) break
             val elapsed = System.currentTimeMillis() - lastInteractionTime
             if (!isAmbientMode && elapsed >= 10000L) {
                 isAmbientMode = true
             }
-            // If Always On Display is disabled, physically turn off the display after 30 seconds of inactivity
+            // If Always On Display is disabled, physically turn off the display after 30 seconds of inactivity on the lock screen
             if (!app.preferences.isAlwaysOnDisplayEnabled() && elapsed >= 30000L && !screenTurnedOffByInactivity) {
                 screenTurnedOffByInactivity = true
                 val turnedOff = FocusAccessibilityService.turnScreenOff()

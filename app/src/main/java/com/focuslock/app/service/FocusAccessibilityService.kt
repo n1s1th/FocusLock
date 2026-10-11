@@ -64,7 +64,20 @@ class FocusAccessibilityService : AccessibilityService() {
         "com.miui.aod",
         "com.oplus.aod",
         "com.vivo.upslide",
-        "com.google.android.ambientindication"
+        "com.google.android.ambientindication",
+        // System Contacts packages
+        "com.google.android.contacts",
+        "com.android.contacts",
+        "com.samsung.android.app.contacts",
+        "com.samsung.android.contacts",
+        "com.sonyericsson.android.socialphonebook",
+        "com.oneplus.contacts",
+        // System Document / PDF viewers
+        "com.google.android.apps.docs",
+        "com.google.android.apps.viewer",
+        "com.adobe.reader",
+        "com.sec.android.app.myfiles",
+        "com.samsung.android.app.notes"
     )
 
     private fun isPhoneCallPackage(packageName: String): Boolean {
@@ -73,7 +86,28 @@ class FocusAccessibilityService : AccessibilityService() {
                 lower.contains("telecom") ||
                 lower.contains("telephony") ||
                 (lower.contains("dialer") && !lower.contains("game")) ||
-                lower.contains("calling")
+                lower.contains("calling") ||
+                lower.contains("contacts")
+    }
+
+    private fun isPdfOrDocViewerPackage(packageName: String): Boolean {
+        val lower = packageName.lowercase(Locale.ROOT)
+        if (lower.contains("pdf") || lower.contains("reader") || lower.contains("viewer")) {
+            return true
+        }
+        return isIntentResolvableByPackage(packageName, "application/pdf")
+    }
+
+    private fun isIntentResolvableByPackage(packageName: String, mimeType: String): Boolean {
+        return try {
+            val intent = Intent(Intent.ACTION_VIEW).apply {
+                setDataAndType(android.net.Uri.parse("content://dummy/file.pdf"), mimeType)
+            }
+            val matches = packageManager.queryIntentActivities(intent, 0)
+            matches.any { it.activityInfo?.packageName == packageName }
+        } catch (e: Exception) {
+            false
+        }
     }
 
     private fun isClockPackage(packageName: String): Boolean {
@@ -404,8 +438,8 @@ class FocusAccessibilityService : AccessibilityService() {
         // 1. Clock and Spotify access from lock screen
         if (isClockPackage(packageName) || isSpotifyPackage(packageName)) return true
 
-        // 2. Essential system apps
-        if (systemEssentialPackages.contains(packageName)) return true
+        // 2. Essential system apps and document/PDF viewers
+        if (systemEssentialPackages.contains(packageName) || isPdfOrDocViewerPackage(packageName)) return true
 
         // 2. Currently launching allowed app within 3 seconds
         if (packageName == currentlyLaunchingPackage && (SystemClock.uptimeMillis() - lastAllowedLaunchTime < 3000L)) {
