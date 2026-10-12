@@ -26,7 +26,11 @@ class RoutineScheduler(private val context: Context) {
     }
 
     fun scheduleRoutine(routine: RoutineEntity) {
-        if (!routine.isEnabled || alarmManager == null) return
+        if (alarmManager == null) return
+        if (!routine.isEnabled || routine.activeDaysMask == 0) {
+            cancelRoutine(routine.id)
+            return
+        }
 
         val triggerTimeMillis = calculateNextTriggerTime(routine.startHour, routine.startMinute, routine.activeDaysMask)
         val intent = Intent(context, RoutineAlarmReceiver::class.java).apply {
@@ -43,7 +47,9 @@ class RoutineScheduler(private val context: Context) {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !alarmManager.canScheduleExactAlarms()) {
+            alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerTimeMillis, pendingIntent)
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerTimeMillis, pendingIntent)
         } else {
             alarmManager.setExact(AlarmManager.RTC_WAKEUP, triggerTimeMillis, pendingIntent)

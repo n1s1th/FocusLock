@@ -52,6 +52,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.focuslock.app.ui.screens.home.components.TopHeaderBar
+import com.focuslock.app.ui.screens.home.components.WeeklyFocusCard
+import com.focuslock.app.FocusLockApp
 import com.focuslock.app.ui.theme.AccentOrange
 import com.focuslock.app.ui.theme.CharcoalPrimary
 import com.focuslock.app.ui.theme.GoogleSans
@@ -94,6 +96,7 @@ fun StatsScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(ScreenBackground)
+            .verticalScroll(rememberScrollState())
             .padding(horizontal = 16.dp, vertical = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(14.dp)
@@ -104,6 +107,8 @@ fun StatsScreen(
             parachuteCount = parachuteCount,
             onProfileClick = onNavigateToSettings
         )
+
+        WeeklyFocusCard(recentSessions, FocusLockApp.instance.preferences)
 
         // 2. TOP WHITE CARD — Fix 5: real bar chart from weekly session data
         Card(
@@ -127,7 +132,7 @@ fun StatsScreen(
 
                     // Fix 5: Real bar heights from last 7 days of sessions
                     weeklyBars.forEachIndexed { i, fraction ->
-                        val h = (size.height * 0.75f) * fraction.coerceAtLeast(0.04f)
+                        val h = (size.height * 0.75f) * fraction.coerceAtLeast(0f)
                         val x = i * (barWidth + barGap) + 4.dp.toPx()
                         drawRoundRect(
                             color = if (i == weeklyBars.lastIndex) AccentOrange else CharcoalPrimary,
@@ -280,7 +285,7 @@ fun StatsScreen(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .weight(1f),
+                .height(280.dp),
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             // Left Column: Day / Month / Year mode buttons
@@ -383,6 +388,22 @@ fun StatsScreen(
                     .fillMaxHeight()
             )
         }
+        if (recentSessions.isNotEmpty()) {
+            Card(colors = CardDefaults.cardColors(containerColor = SurfaceBright), modifier = Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("Recent sessions", fontFamily = GoogleSans, color = CharcoalPrimary)
+                    recentSessions.take(5).forEach { session ->
+                        val label = if (session.isCompleted) "Completed" else "Interrupted"
+                        val seconds = session.actualFocusMillis / 1000
+                        Text("${session.task.ifBlank { session.bagName }} · $label", fontFamily = GoogleSans, color = CharcoalPrimary)
+                        Text("${session.dateString} · ${seconds / 60}m ${seconds % 60}s" +
+                            (if (session.exitReason.isBlank()) "" else " · ${session.exitReason.replace('_', ' ')}"),
+                            fontFamily = GoogleSans, color = SecondaryGray)
+                    }
+                }
+            }
+        }
+
     }
 }
 

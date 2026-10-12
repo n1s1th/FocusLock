@@ -45,7 +45,7 @@ class StatsViewModel(application: Application) : AndroidViewModel(application) {
         val dayFmt = SimpleDateFormat("EEEE d", Locale.US)
         val label = dayFmt.format(Date()).uppercase(Locale.US)
         val todayMins = sessions
-            .filter { it.dateString == today }
+            .filter { it.dateString == today && it.isCompleted }
             .sumOf { it.actualDurationMinutes }
         return "$label  ·  $todayMins MIN"
     }
@@ -62,7 +62,7 @@ class StatsViewModel(application: Application) : AndroidViewModel(application) {
         for (i in 6 downTo 0) {
             val dayCal = Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, -i) }
             val dateStr = fmt.format(dayCal.time)
-            val mins = sessions.filter { it.dateString == dateStr }.sumOf { it.actualDurationMinutes }
+            val mins = sessions.filter { it.dateString == dateStr && it.isCompleted }.sumOf { it.actualDurationMinutes }
             minutesList.add(mins)
         }
         val maxMins = minutesList.maxOrNull()?.takeIf { it > 0 } ?: 1

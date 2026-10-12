@@ -109,6 +109,7 @@ import com.focuslock.app.ui.screens.home.components.BlockLogoView
 import com.focuslock.app.ui.screens.home.components.DigitalTimerDisplay
 import com.focuslock.app.ui.screens.home.components.SquareDigit
 import com.focuslock.app.ui.screens.lock.components.DoneScreenContent
+import com.focuslock.app.ui.screens.lock.components.FocusDecisionDialog
 import com.focuslock.app.ui.theme.AccentOrange
 import com.focuslock.app.ui.theme.GoogleSans
 import kotlinx.coroutines.delay
@@ -134,6 +135,8 @@ fun LockScreenContent(
     var showEmergencyDialog by remember { mutableStateOf(false) }
     var showNoParachuteDialog by remember { mutableStateOf(false) }
     var isSessionCompleted by remember { mutableStateOf(false) }
+    var resetRemainingMillis by remember { mutableLongStateOf(0L) }
+    val habitRevision by app.preferences.habitRevision.collectAsState()
 
     // Initial session info preserved for Done screen
     val plannedDurationMinutes = remember {
@@ -146,8 +149,8 @@ fun LockScreenContent(
         app.database.sessionDao().getTotalFocusMinutesForDate(todayDateString)
     }
     val todayMinutesState by todayMinutesFlow.collectAsState(initial = 0)
-    val todayFocusMinutes = (todayMinutesState ?: 0).coerceAtLeast(plannedDurationMinutes)
-    val currentStreak = remember { app.preferences.getCurrentStreak().coerceAtLeast(1) }
+    val todayFocusMinutes = todayMinutesState ?: 0
+    val currentStreak = app.preferences.getCurrentStreak()
 
     val totalParachutes by app.preferences.parachutesStateFlow.collectAsState()
 
@@ -247,16 +250,19 @@ fun LockScreenContent(
         app.preferences.setActiveAllowedPackages(nonBlank)
         FocusAccessibilityService.updateAllowedPackages(nonBlank.toSet())
 
+        var completionRequested = false
         while (true) {
-            val endMillis = app.preferences.getSessionEndTimeMillis()
-            val remaining = endMillis - System.currentTimeMillis()
-            if (remaining <= 0) {
-                // Focus session successfully completed! Show DONE screen
-                FocusLockService.stopService(context)
-                isSessionCompleted = true
+            if (!app.preferences.hasStoredSession()) {
+                if (app.preferences.getLastOutcome() == "completed") isSessionCompleted = true
+                else onExitLock()
                 break
             }
-            remainingMillis = remaining
+            remainingMillis = app.preferences.getRemainingFocusMillis()
+            resetRemainingMillis = app.preferences.getResetRemainingMillis()
+            if (remainingMillis <= 0 && !completionRequested) {
+                completionRequested = true
+                FocusLockService.completeService(context)
+            }
             delay(250L)
         }
     }
@@ -264,7 +270,7 @@ fun LockScreenContent(
     // If session has finished successfully, show the DONE Completion Screen
     if (isSessionCompleted) {
         DoneScreenContent(
-            sessionMinutes = plannedDurationMinutes,
+            sessionMinutes = app.preferences.getSessionTotalDurationMinutes(),
             todayMinutes = todayFocusMinutes,
             streak = currentStreak,
             onDoneClick = onExitLock
@@ -432,6 +438,11 @@ fun LockScreenContent(
                 color = Color.White,
                 pulseColor = AccentOrange
             )
+
+            if (app.preferences.getActiveTask().isNotBlank() && !isAmbientMode) {
+                Text(app.preferences.getActiveTask(), color = Color.White, fontFamily = GoogleSans,
+                    fontSize = 14.sp, maxLines = 2)
+            }
 
             // 2. BIG DIGITAL TIMER CARD (HH:MM / MM:SS)
             Card(
@@ -614,17 +625,7 @@ fun LockScreenContent(
                             .clip(RoundedCornerShape(22.dp))
                             .clickable {
                                 if (!isAmbientMode) {
-                                    val currentEnd = app.preferences.getSessionEndTimeMillis()
-                                    val newEnd = currentEnd + (15 * 60 * 1000L)
-                                    val totalMin = app.preferences.getSessionTotalDurationMinutes() + 15
-                                    val currentPkgs = (bagEntity?.allowedPackages ?: emptyList()).filter { it.isNotBlank() }
-                                    app.preferences.startSession(
-                                        endTimeMillis = newEnd,
-                                        durationMinutes = totalMin,
-                                        bagId = app.preferences.getActiveBagId(),
-                                        bagName = app.preferences.getActiveBagName(),
-                                        allowedPackages = currentPkgs
-                                    )
+                                    app.preferences.extendSession(15)
                                 }
                             },
                         shape = RoundedCornerShape(22.dp),
@@ -764,56 +765,24 @@ fun LockScreenContent(
             }
         }
 
-        // Parachute Emergency Confirmation Dialog
+        // Optional reflection never gates urgent access.
         if (showEmergencyDialog) {
+            FocusDecisionDialog(
+                task = app.preferences.getActiveTask(), plan = app.preferences.getActivePlan(),
+                remainingMinutes = ((remainingMillis + 59_999) / 60_000).toInt(),
+                onContinue = { showEmergencyDialog = false },
+                onReset = { showEmergencyDialog = false; app.preferences.beginReset(); registerUserInteraction() },
+                onExit = { showEmergencyDialog = false; FocusLockService.stopService(context) }
+            )
+        }
+        if (resetRemainingMillis > 0) {
             AlertDialog(
-                onDismissRequest = { showEmergencyDialog = false },
+                onDismissRequest = { app.preferences.resumeReset(); registerUserInteraction() },
                 containerColor = CardBackgroundDark,
-                title = {
-                    Text(
-                        text = "Use 1 Parachute?",
-                        fontFamily = GoogleSans,
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold
-                    )
-                },
-                text = {
-                    Text(
-                        text = "You have $totalParachutes parachute(s) available. Using 1 will end this focus session immediately without penalty.",
-                        fontFamily = GoogleSans,
-                        color = CardMutedText
-                    )
-                },
-                confirmButton = {
-                    Button(
-                        onClick = {
-                            showEmergencyDialog = false
-                            val success = app.preferences.useParachute()
-                            if (success) {
-                                FocusLockService.stopService(context)
-                                onExitLock()
-                            }
-                        },
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = AccentOrange)
-                    ) {
-                        Text(
-                            text = "Use Parachute",
-                            fontFamily = GoogleSans,
-                            color = Color.White,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showEmergencyDialog = false }) {
-                        Text(
-                            text = "Keep Focusing",
-                            fontFamily = GoogleSans,
-                            color = Color.White
-                        )
-                    }
-                }
+                title = { Text("A small reset", color = Color.White) },
+                text = { Text("${(resetRemainingMillis + 999) / 1000}s of rest. Stand up, relax your shoulders, look away. Focus time is paused; distracting apps stay blocked.", color = Color.White) },
+                confirmButton = { TextButton(onClick = { app.preferences.resumeReset(); registerUserInteraction() }) { Text("Resume now", color = Color.White) } },
+                dismissButton = { TextButton(onClick = { FocusLockService.stopService(context) }) { Text("Urgent exit - parachute", color = Color.White) } }
             )
         }
 
@@ -1666,6 +1635,3 @@ private fun SpotifyWidgetPreview(
         }
     }
 }
-
-
-

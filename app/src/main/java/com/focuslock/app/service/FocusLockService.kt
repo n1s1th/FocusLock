@@ -26,6 +26,7 @@ class FocusLockService : Service() {
 
     private val serviceScope = CoroutineScope(Dispatchers.Main + Job())
     private var countdownJob: Job? = null
+    private var finishing = false
 
     private val screenReceiver = object : android.content.BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -57,7 +58,12 @@ class FocusLockService : Service() {
     companion object {
         const val ACTION_START_LOCK = "ACTION_START_LOCK"
         const val ACTION_STOP_LOCK = "ACTION_STOP_LOCK"
+        const val ACTION_COMPLETE_LOCK = "ACTION_COMPLETE_LOCK"
         const val NOTIFICATION_ID = 1001
+
+        fun completeService(context: Context) {
+            context.startService(Intent(context, FocusLockService::class.java).setAction(ACTION_COMPLETE_LOCK))
+        }
 
         fun startService(context: Context) {
             val intent = Intent(context, FocusLockService::class.java).apply {
@@ -81,10 +87,18 @@ class FocusLockService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (!FocusLockApp.instance.preferences.hasStoredSession()) {
+            stopSelf()
+            return START_NOT_STICKY
+        }
         when (intent?.action) {
             ACTION_STOP_LOCK -> {
-                finishSession(completed = false)
-                stopSelf()
+                val prefs = FocusLockApp.instance.preferences
+                if (prefs.getRemainingFocusMillis() <= 0) finishSession(completed = true)
+                else if (!finishing && prefs.useParachute()) finishSession(completed = false)
+            }
+            ACTION_COMPLETE_LOCK -> {
+                if (FocusLockApp.instance.preferences.getRemainingFocusMillis() <= 0) finishSession(completed = true)
             }
             else -> {
                 startForegroundWithNotification()
@@ -108,11 +122,10 @@ class FocusLockService : Service() {
         countdownJob = serviceScope.launch {
             while (isActive) {
                 val app = FocusLockApp.instance
-                val remainingMillis = app.preferences.getSessionEndTimeMillis() - System.currentTimeMillis()
+                val remainingMillis = app.preferences.getRemainingFocusMillis()
 
                 if (remainingMillis <= 0) {
                     finishSession(completed = true)
-                    stopSelf()
                     break
                 }
 
@@ -149,7 +162,7 @@ class FocusLockService : Service() {
 
         return NotificationCompat.Builder(this, FocusLockApp.FOCUS_NOTIFICATION_CHANNEL_ID)
             .setContentTitle("BlockIT Active • $bagName")
-            .setContentText("Time remaining: $timeString")
+            .setContentText(if (app.preferences.getResetRemainingMillis() > 0) "Brief reset · focus resumes shortly" else "Time remaining: $timeString")
             .setSmallIcon(android.R.drawable.ic_lock_idle_lock)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
@@ -161,38 +174,46 @@ class FocusLockService : Service() {
 
     private fun finishSession(completed: Boolean) {
         val app = FocusLockApp.instance
-        val totalMinutes = app.preferences.getSessionTotalDurationMinutes()
-        val remainingMillis = (app.preferences.getSessionEndTimeMillis() - System.currentTimeMillis()).coerceAtLeast(0)
-        val actualMinutes = (totalMinutes - (remainingMillis / (1000 * 60))).toInt().coerceAtLeast(1)
-        val distractionsCount = app.preferences.getDistractionsBlockedCount()
-
-        val bagId = app.preferences.getActiveBagId()
-        val bagName = app.preferences.getActiveBagName()
-        val today = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
-
-        app.applicationScope.launch(Dispatchers.IO) {
-            app.database.sessionDao().insertSession(
-                SessionEntity(
-                    startTime = System.currentTimeMillis() - (actualMinutes * 60 * 1000L),
-                    endTime = System.currentTimeMillis(),
-                    plannedDurationMinutes = totalMinutes,
-                    actualDurationMinutes = if (completed) totalMinutes else actualMinutes,
-                    bagId = bagId,
-                    bagName = bagName,
-                    isCompleted = completed,
-                    distractionsBlockedCount = distractionsCount,
-                    dateString = today
-                )
-            )
+        val prefs = app.preferences
+        if (finishing || !prefs.hasStoredSession()) return
+        finishing = true
+        countdownJob?.cancel()
+        val key = prefs.getSessionKey()
+        val now = if (completed) prefs.getSessionEndTimeMillis() else System.currentTimeMillis()
+        val total = prefs.getSessionTotalDurationMinutes()
+        val focused = if (completed) total * 60_000L else
+            com.focuslock.app.data.model.FocusProgress.focusedMillis(total, prefs.getRemainingFocusMillis())
+        val session = SessionEntity(
+            startTime = prefs.getSessionStartMillis(), endTime = now,
+            plannedDurationMinutes = total, actualDurationMinutes = (focused / 60_000).toInt(),
+            bagId = prefs.getActiveBagId(), bagName = prefs.getActiveBagName(),
+            isCompleted = completed, distractionsBlockedCount = prefs.getDistractionsBlockedCount(),
+            dateString = java.time.Instant.ofEpochMilli(now).atZone(java.time.ZoneId.systemDefault()).toLocalDate().toString(), sessionKey = key,
+            task = prefs.getActiveTask(), copingPlan = prefs.getActivePlan(), actualFocusMillis = focused
+        )
+        // Persist first, then publish the outcome. The unique key prevents duplicate records on recovery.
+        serviceScope.launch {
+            try {
+                kotlinx.coroutines.withContext(Dispatchers.IO) {
+                    app.database.sessionDao().insertSession(session)
+                    prefs.refreshProgress(app.database.sessionDao().getSessions())
+                }
+                prefs.finishSessionState(completed, key)
+                stopForeground(STOP_FOREGROUND_REMOVE)
+                stopSelf()
+            } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                android.util.Log.e("FocusLock", "Could not save session", error)
+                finishing = false
+                startCountdown()
+            }
         }
-
-        app.preferences.stopSession()
-        stopForeground(STOP_FOREGROUND_REMOVE)
     }
 
     private fun getRemainingSeconds(): Int {
         val app = FocusLockApp.instance
-        val remainingMillis = (app.preferences.getSessionEndTimeMillis() - System.currentTimeMillis()).coerceAtLeast(0)
+        val remainingMillis = (app.preferences.getRemainingFocusMillis()).coerceAtLeast(0)
         return (remainingMillis / 1000).toInt()
     }
 
@@ -206,8 +227,9 @@ class FocusLockService : Service() {
             unregisterReceiver(screenReceiver)
         } catch (_: Exception) {}
         countdownJob?.cancel()
+        serviceScope.coroutineContext[Job]?.cancel()
         // Schedule watchdog alarm if session was stopped unexpectedly
-        if (FocusLockApp.instance.preferences.isSessionActive()) {
+        if (FocusLockApp.instance.preferences.hasStoredSession()) {
             LockWatchdogReceiver.scheduleWatchdog(this, 5000L)
         }
     }

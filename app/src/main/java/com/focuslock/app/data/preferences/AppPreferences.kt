@@ -8,6 +8,10 @@ import kotlinx.coroutines.flow.asStateFlow
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.time.LocalDate
+import java.util.UUID
+import com.focuslock.app.data.model.FocusProgress
+import com.focuslock.app.data.database.entities.SessionEntity
 
 class AppPreferences(context: Context) {
 
@@ -55,7 +59,93 @@ class AppPreferences(context: Context) {
         prefs.edit().putBoolean(KEY_ALWAYS_ON_DISPLAY, enabled).apply()
     }
 
-    fun getCurrentStreak(): Int = prefs.getInt(KEY_CURRENT_STREAK, 0)
+    private val _habitRevision = MutableStateFlow(0)
+    val habitRevision: StateFlow<Int> = _habitRevision.asStateFlow()
+
+    val routineRequest = MutableStateFlow<Long?>(null)
+    private fun changed() { _habitRevision.value++ }
+    fun getWeeklyGoal(): Int = prefs.getInt("weekly_goal", 4)
+    fun getFocusDaysMask(): Int = prefs.getInt("focus_days", 127)
+    fun getSavedMinutes(): Int = prefs.getInt("saved_minutes", 15)
+    fun getSavedTask(bagId: Long = getSelectedBagId()): String = prefs.getString("saved_task_$bagId", "") ?: ""
+    fun getSavedPlan(bagId: Long = getSelectedBagId()): String = prefs.getString("saved_plan_$bagId", "") ?: ""
+    fun getActiveTask(): String = prefs.getString("active_task", "") ?: ""
+    fun getActivePlan(): String = prefs.getString("active_plan", "") ?: ""
+    fun getSessionKey(): String = prefs.getString("session_key", null)
+        ?: "restored-${getSessionEndTimeMillis()}"
+    fun getSessionStartMillis(): Long = prefs.getLong("session_start", getSessionEndTimeMillis() - getSessionTotalDurationMinutes() * 60_000L)
+    fun hasStoredSession(): Boolean = getSessionEndTimeMillis() > 0
+    fun getLastOutcome(): String = prefs.getString("last_outcome", "") ?: ""
+    fun getLastSessionKey(): String = prefs.getString("last_session_key", "") ?: ""
+    fun getPendingReasonKey(): String = prefs.getString("pending_reason_key", "") ?: ""
+    fun dismissPendingReason() { prefs.edit().remove("pending_reason_key").apply(); changed() }
+    fun getAchievements(): Set<String> = prefs.getStringSet("achievements", emptySet())?.toSet() ?: emptySet()
+
+    fun saveHabitSettings(goal: Int, daysMask: Int) {
+        prefs.edit().putInt("weekly_goal", goal.coerceIn(1, 14))
+            .putInt("focus_days", if (daysMask == 0) 127 else daysMask and 127).apply()
+        changed()
+    }
+
+    fun savePreset(minutes: Int, task: String, plan: String) {
+        prefs.edit().putInt("saved_minutes", minutes.coerceIn(1, 720))
+            .putString("saved_task_${getSelectedBagId()}", task.trim().take(120))
+            .putString("saved_plan_${getSelectedBagId()}", plan.trim().take(160)).apply()
+        changed()
+    }
+
+    fun refreshProgress(sessions: List<SessionEntity>) {
+        val completed = sessions.filter { it.isCompleted }
+        val dates = completed.map { it.dateString }.toSet()
+        val earned = getAchievements().toMutableSet()
+        for ((count, name) in listOf(1 to "First finish", 5 to "First five", 20 to "Twenty finishes")) {
+            if (completed.size >= count) earned.add(name)
+        }
+        if (dates != prefs.getStringSet("completed_dates", emptySet()) || earned != getAchievements()) {
+            prefs.edit().putStringSet("completed_dates", dates).putStringSet("achievements", earned).apply()
+            changed()
+        }
+    }
+
+    fun getCurrentStreak(): Int {
+        val dates = (prefs.getStringSet("completed_dates", emptySet()) ?: emptySet())
+            .mapNotNull { runCatching { LocalDate.parse(it) }.getOrNull() }.toSet()
+        return FocusProgress.streak(dates, LocalDate.now(), getFocusDaysMask())
+    }
+
+    fun getResetRemainingMillis(): Long = (prefs.getLong("reset_end", 0) - System.currentTimeMillis()).coerceAtLeast(0)
+    fun getRemainingFocusMillis(): Long = FocusProgress.remainingFocusMillis(
+        getSessionEndTimeMillis(), prefs.getLong("reset_end", 0), System.currentTimeMillis())
+
+    @Synchronized fun beginReset(): Boolean {
+        if (!isSessionActive() || getResetRemainingMillis() > 0) return false
+        prefs.edit().putLong(KEY_SESSION_END_MILLIS, getSessionEndTimeMillis() + 60_000)
+            .putLong("reset_end", System.currentTimeMillis() + 60_000).apply()
+        changed()
+        return true
+    }
+
+    @Synchronized fun resumeReset() {
+        val unused = getResetRemainingMillis()
+        prefs.edit().putLong(KEY_SESSION_END_MILLIS, getSessionEndTimeMillis() - unused)
+            .putLong("reset_end", 0).apply()
+        changed()
+    }
+
+    @Synchronized fun extendSession(minutes: Int) {
+        if (!isSessionActive()) return
+        prefs.edit().putLong(KEY_SESSION_END_MILLIS, getSessionEndTimeMillis() + minutes * 60_000L)
+            .putInt(KEY_SESSION_TOTAL_MINUTES, getSessionTotalDurationMinutes() + minutes).apply()
+        changed()
+    }
+
+    fun finishSessionState(completed: Boolean, key: String) {
+        prefs.edit().putString("last_outcome", if (completed) "completed" else "interrupted")
+            .putString("last_session_key", key)
+            .putString("pending_reason_key", if (completed) "" else key).apply()
+        stopSession()
+        changed()
+    }
 
     fun getLastActiveDate(): String = prefs.getString(KEY_LAST_ACTIVE_DATE, "") ?: ""
 
@@ -204,21 +294,30 @@ class AppPreferences(context: Context) {
         return fromPrefs
     }
 
-    fun startSession(
+    @Synchronized fun startSession(
         endTimeMillis: Long,
         durationMinutes: Int,
         bagId: Long,
         bagName: String,
-        allowedPackages: List<String> = emptyList()
-    ) {
+        allowedPackages: List<String> = emptyList(),
+        task: String = "",
+        copingPlan: String = ""
+    ): Boolean {
+        if (hasStoredSession()) return false
         val editor = prefs.edit()
+            .putString("session_key", UUID.randomUUID().toString())
+            .putLong("session_start", System.currentTimeMillis())
+            .putLong("reset_end", 0)
+            .putString("active_task", task)
+            .putString("active_plan", copingPlan)
+            .putString("last_outcome", "")
             .putLong(KEY_SESSION_END_MILLIS, endTimeMillis)
             .putInt(KEY_SESSION_TOTAL_MINUTES, durationMinutes)
             .putLong(KEY_ACTIVE_BAG_ID, bagId)
             .putString(KEY_ACTIVE_BAG_NAME, bagName)
             .putInt(KEY_DISTRACTIONS_BLOCKED, 0)
 
-        if (allowedPackages.isNotEmpty()) {
+        run {
             val clean = allowedPackages.filter { it.isNotBlank() }.toSet()
             _cachedAllowedPackages = clean
             editor.putStringSet(KEY_ACTIVE_ALLOWED_PACKAGES, clean)
@@ -231,7 +330,8 @@ class AppPreferences(context: Context) {
 
         editor.apply()
         _isSessionActiveFlow.value = true
-        recordStreakActivity()
+        changed()
+        return true
     }
 
     fun stopSession() {
@@ -263,38 +363,6 @@ class AppPreferences(context: Context) {
 
     fun setOnboardingCompleted(completed: Boolean) {
         prefs.edit().putBoolean(KEY_ONBOARDING_COMPLETED, completed).apply()
-    }
-
-    private fun recordStreakActivity() {
-        val today = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
-        val lastDate = getLastActiveDate()
-
-        if (lastDate == today) {
-            return
-        }
-
-        val streak = getCurrentStreak()
-        val isConsecutive = isYesterday(lastDate)
-
-        val newStreak = if (isConsecutive || lastDate.isEmpty()) streak + 1 else 1
-
-        prefs.edit()
-            .putString(KEY_LAST_ACTIVE_DATE, today)
-            .putInt(KEY_CURRENT_STREAK, newStreak)
-            .apply()
-    }
-
-    private fun isYesterday(dateStr: String): Boolean {
-        if (dateStr.isEmpty()) return false
-        return try {
-            val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.US)
-            val lastDate = sdf.parse(dateStr) ?: return false
-            val diff = System.currentTimeMillis() - lastDate.time
-            val diffDays = diff / (1000 * 60 * 60 * 24)
-            diffDays in 1..2
-        } catch (e: Exception) {
-            false
-        }
     }
 
     companion object {

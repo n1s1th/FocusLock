@@ -27,6 +27,11 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import com.focuslock.app.FocusLockApp
+import java.time.LocalDate
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -55,6 +60,19 @@ fun DoneScreenContent(
     onDoneClick: () -> Unit
 ) {
     val context = LocalContext.current
+    val preferences = FocusLockApp.instance.preferences
+    val habitRevision by preferences.habitRevision.collectAsState()
+    val sessionsFlow = remember { FocusLockApp.instance.database.sessionDao().getAllSessionsFlow() }
+    val sessions by sessionsFlow.collectAsState(initial = emptyList())
+    val completedDates = sessions.filter { it.isCompleted }.map { it.dateString }.toSet()
+    val monday = com.focuslock.app.data.model.FocusProgress.weekStart(LocalDate.now())
+    val completedThisWeek = sessions.count { it.isCompleted && it.dateString >= monday.toString() && it.dateString <= monday.plusDays(6).toString() }
+    val completedCount = sessions.count { it.isCompleted }
+    val milestone = when {
+        completedCount >= 20 -> "Twenty finishes"
+        completedCount >= 5 -> "First five"
+        else -> "First finish"
+    }
 
     // Determine current day of week (Monday=0 ... Sunday=6)
     val calendar = Calendar.getInstance()
@@ -111,6 +129,9 @@ fun DoneScreenContent(
                     )
                 }
             }
+
+            Text("$completedThisWeek / ${preferences.getWeeklyGoal()} sessions this week · $milestone",
+                color = Color.White, fontFamily = GoogleSans, fontSize = 12.sp)
 
             // 3. STATS ROW (MIN · SESSION | MIN · TODAY)
             Row(
@@ -219,7 +240,7 @@ fun DoneScreenContent(
                             color = AccentOrange
                         )
                         Text(
-                            text = "DAY STREAK",
+                            text = "FOCUS DAY STREAK",
                             fontFamily = GoogleSans,
                             fontWeight = FontWeight.Bold,
                             fontSize = 10.sp,
@@ -235,7 +256,7 @@ fun DoneScreenContent(
                     ) {
                         weekLetters.forEachIndexed { index, letter ->
                             val isToday = index == dayIndexMondayBased
-                            val isPastOrToday = index <= dayIndexMondayBased
+                            val isCompletedDay = monday.plusDays(index.toLong()).toString() in completedDates
 
                             Column(
                                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -246,7 +267,7 @@ fun DoneScreenContent(
                                     modifier = Modifier
                                         .size(12.dp)
                                         .clip(RoundedCornerShape(2.dp))
-                                        .background(if (isPastOrToday) IndicatorActive else IndicatorDark)
+                                        .background(if (isCompletedDay) AccentOrange else IndicatorDark)
                                 )
                                 // Day letter
                                 Text(

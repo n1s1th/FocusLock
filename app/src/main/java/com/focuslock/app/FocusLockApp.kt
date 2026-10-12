@@ -28,6 +28,9 @@ class FocusLockApp : Application() {
         super.onCreate()
         instance = this
         createNotificationChannels()
+        applicationScope.launch {
+            database.sessionDao().getAllSessionsFlow().collect { preferences.refreshProgress(it) }
+        }
     }
 
     private fun createNotificationChannels() {

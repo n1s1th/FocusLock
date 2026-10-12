@@ -43,6 +43,16 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.focuslock.app.FocusLockApp
+import com.focuslock.app.ui.screens.home.components.WeeklyFocusCard
+import com.focuslock.app.ui.screens.home.components.HabitGoalDialog
+import com.focuslock.app.ui.screens.home.components.SessionPlanDialog
+import com.focuslock.app.ui.screens.home.components.ExitReasonDialog
+import androidx.compose.runtime.DisposableEffect
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.compose.material3.TextButton
 import com.focuslock.app.R
 import com.focuslock.app.data.database.entities.BagEntity
 import com.focuslock.app.service.FocusAccessibilityService
@@ -78,7 +88,31 @@ fun HomeScreen(
     val isSessionActive by viewModel.isSessionActive.collectAsState()
     val parachuteCount by viewModel.parachuteCount.collectAsState()
 
-    val isAccessibilityOn = FocusAccessibilityService.isServiceRunning
+    val preferences = FocusLockApp.instance.preferences
+    val sessions by viewModel.sessions.collectAsState()
+    val bags by viewModel.bags.collectAsState()
+    val revision by viewModel.habitRevision.collectAsState()
+    var showPlan by remember { mutableStateOf(false) }
+    var showGoal by remember { mutableStateOf(false) }
+    var isAccessibilityOn by remember { mutableStateOf(FocusAccessibilityService.isServiceRunning) }
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    DisposableEffect(lifecycle) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) isAccessibilityOn = FocusAccessibilityService.isServiceRunning
+        }
+        lifecycle.addObserver(observer)
+        onDispose { lifecycle.removeObserver(observer) }
+    }
+    if (showPlan) SessionPlanDialog(selectedMinutes, bags, preferences.getSelectedBagId(), preferences,
+        onDismiss = { showPlan = false }, canStart = isAccessibilityOn, onStart = { bag, task, plan ->
+            if (viewModel.startFocusSession(bag, task, plan)) {
+                preferences.setSelectedBagId(bag.id)
+                showPlan = false
+            }
+        })
+    if (showGoal) HabitGoalDialog(preferences) { showGoal = false }
+    val pending = sessions.find { it.sessionKey == preferences.getPendingReasonKey() && !it.isCompleted }
+    if (pending != null && !isSessionActive) ExitReasonDialog(pending) { viewModel.recordExitReason(pending.sessionKey, it) }
     var isReelMode by remember { mutableStateOf(false) }
 
     // Fix 4: Use LaunchedEffect to avoid side-effects in composition body
@@ -95,6 +129,7 @@ fun HomeScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(ScreenBackground)
+            .verticalScroll(rememberScrollState())
             .padding(horizontal = 16.dp, vertical = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(14.dp)
@@ -114,6 +149,22 @@ fun HomeScreen(
         if (isReelMode) {
             ReelBlockDashboardScreen(onAppClick = onNavigateToAppConfig)
         } else {
+
+        WeeklyFocusCard(sessions, preferences) { showGoal = true }
+        val last = sessions.firstOrNull()
+        if (last != null && !last.isCompleted && last.exitReason in listOf("too_long", "distraction")) {
+            Card(colors = CardDefaults.cardColors(containerColor = SurfaceBright), modifier = Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(14.dp)) {
+                    Text("One interruption does not erase progress.", fontFamily = GoogleSans, color = CharcoalPrimary)
+                    TextButton(onClick = {
+                        viewModel.setMinutes(minOf(10, maxOf(1, last.plannedDurationMinutes / 2)))
+                        showPlan = true
+                    }) { Text("Choose a shorter session") }
+                }
+            }
+        } else if (last?.exitReason == "blocked_app") {
+            Text("Before your next session, add the tool you needed on the Bags screen.", color = SecondaryGray)
+        }
 
         // Accessibility Permission Notice (compact if disabled)
         if (!isAccessibilityOn) {
@@ -189,7 +240,7 @@ fun HomeScreen(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .weight(1f),
+                .height(260.dp),
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             // Left Column: 2x2 Preset Cards
@@ -265,8 +316,7 @@ fun HomeScreen(
         // 4. SLIDE TO START
         SlideToStart(
             onSlideComplete = {
-                viewModel.startFocusSession()
-                onNavigateToLock()
+                showPlan = true
             },
             text = "SLIDE TO START"
         )

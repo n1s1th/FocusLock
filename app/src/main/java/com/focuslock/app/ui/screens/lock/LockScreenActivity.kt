@@ -12,6 +12,11 @@ class LockScreenActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        onBackPressedDispatcher.addCallback(this, object : androidx.activity.OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                if (!com.focuslock.app.FocusLockApp.instance.preferences.hasStoredSession()) finish()
+            }
+        })
         enableEdgeToEdge()
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
@@ -61,9 +66,4 @@ class LockScreenActivity : ComponentActivity() {
         }
     }
 
-    @Suppress("DEPRECATION")
-    override fun onBackPressed() {
-        // Prevent back button from bypassing active lock screen
-        // Move task to back or keep on screen
-    }
 }

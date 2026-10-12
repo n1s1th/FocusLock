@@ -15,7 +15,7 @@ class BootReceiver : BroadcastReceiver() {
         Log.d("BootReceiver", "Device boot or time reset received: ${intent?.action}")
 
         // 1. If a session was active during reboot, resume it immediately
-        if (app.preferences.isSessionActive()) {
+        if (app.preferences.hasStoredSession()) {
             FocusLockService.startService(context)
         }
 

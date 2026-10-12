@@ -28,7 +28,13 @@ interface SessionDao {
     @Query("SELECT DISTINCT dateString FROM sessions WHERE isCompleted = 1 ORDER BY dateString DESC")
     fun getActiveSessionDatesFlow(): Flow<List<String>>
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Query("SELECT * FROM sessions ORDER BY startTime DESC")
+    suspend fun getSessions(): List<SessionEntity>
+
+    @Query("UPDATE sessions SET exitReason = :reason WHERE sessionKey = :key AND isCompleted = 0")
+    suspend fun setExitReason(key: String, reason: String)
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertSession(session: SessionEntity): Long
 
     @Update

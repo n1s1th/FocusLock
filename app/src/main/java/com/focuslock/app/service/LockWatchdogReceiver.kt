@@ -15,7 +15,7 @@ class LockWatchdogReceiver : BroadcastReceiver() {
         if (context == null) return
         val app = FocusLockApp.instance
 
-        if (app.preferences.isSessionActive()) {
+        if (app.preferences.hasStoredSession()) {
             Log.d("LockWatchdog", "Active focus session detected! Reviving FocusLockService...")
             FocusLockService.startService(context)
         }

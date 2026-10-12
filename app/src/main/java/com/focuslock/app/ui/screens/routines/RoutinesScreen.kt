@@ -32,6 +32,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -91,6 +93,10 @@ fun RoutinesScreen(
     // Use the currently selected real routine (or first if index out of range)
     val currentRoutine = routineList.getOrElse(selectedRoutineIndex) { routine1 }
     val isDataLoaded = routines.isNotEmpty()
+    var showHabitOptions by remember { mutableStateOf(false) }
+    if (showHabitOptions) RoutineHabitDialog(currentRoutine, { showHabitOptions = false }) { cue, reminder ->
+        viewModel.updateHabitOptions(currentRoutine, cue, reminder)
+    }
 
     val startHour = currentRoutine.startHour
     val startMinute = currentRoutine.startMinute
@@ -107,6 +113,7 @@ fun RoutinesScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(ScreenBackground)
+            .verticalScroll(rememberScrollState())
             .padding(horizontal = 16.dp, vertical = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(14.dp)
@@ -273,11 +280,16 @@ fun RoutinesScreen(
             )
         }
 
+        TextButton(enabled = isDataLoaded, onClick = { showHabitOptions = true }) {
+            Text((if (currentRoutine.reminderOnly) "Reminder" else "Automatic lock") +
+                (if (currentRoutine.cue.isBlank()) " · add a daily cue" else " · ${currentRoutine.cue}"))
+        }
+
         // 4. BOTTOM ROUTINE SCHEDULER CARD (Days of Week + Rulers)
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .weight(1f),
+                .height(320.dp),
             shape = RoundedCornerShape(26.dp),
             colors = CardDefaults.cardColors(containerColor = SurfaceVariant),
             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)

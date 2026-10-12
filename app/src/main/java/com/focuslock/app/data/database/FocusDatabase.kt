@@ -21,7 +21,7 @@ import kotlinx.coroutines.launch
 
 @Database(
     entities = [BagEntity::class, RoutineEntity::class, SessionEntity::class, ReelBlockAppEntity::class],
-    version = 2,
+    version = 3,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -52,6 +52,19 @@ abstract class FocusDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                for (column in listOf("sessionKey", "task", "copingPlan", "exitReason")) {
+                    db.execSQL("ALTER TABLE sessions ADD COLUMN `$column` TEXT NOT NULL DEFAULT ''")
+                }
+                db.execSQL("ALTER TABLE sessions ADD COLUMN actualFocusMillis INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("UPDATE sessions SET sessionKey = 'legacy-' || id, actualFocusMillis = actualDurationMinutes * 60000")
+                db.execSQL("CREATE UNIQUE INDEX index_sessions_sessionKey ON sessions(sessionKey)")
+                db.execSQL("ALTER TABLE routines ADD COLUMN cue TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE routines ADD COLUMN reminderOnly INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
         fun getDatabase(context: Context, scope: CoroutineScope): FocusDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -59,7 +72,7 @@ abstract class FocusDatabase : RoomDatabase() {
                     FocusDatabase::class.java,
                     "focus_lock_db"
                 )
-                    .addMigrations(MIGRATION_1_2)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
                     .addCallback(FocusDatabaseCallback(scope))
                     .build()
                 INSTANCE = instance

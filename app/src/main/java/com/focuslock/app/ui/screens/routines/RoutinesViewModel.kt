@@ -60,9 +60,9 @@ class RoutinesViewModel(application: Application) : AndroidViewModel(application
                         targetBagId = bag1Id,
                         startHour = 9,
                         startMinute = 0,
-                        durationMinutes = 60,
+                        durationMinutes = 15,
                         activeDaysMask = 62, // Mon–Fri (bits 1..5)
-                        isEnabled = false
+                        isEnabled = false, reminderOnly = true
                     )
                 )
             } else if (r1.targetBagId != bag1Id) {
@@ -77,9 +77,9 @@ class RoutinesViewModel(application: Application) : AndroidViewModel(application
                         targetBagId = bag2Id,
                         startHour = 14,
                         startMinute = 0,
-                        durationMinutes = 60,
+                        durationMinutes = 15,
                         activeDaysMask = 62,
-                        isEnabled = false
+                        isEnabled = false, reminderOnly = true
                     )
                 )
             } else if (r2.targetBagId != bag2Id) {
@@ -94,9 +94,9 @@ class RoutinesViewModel(application: Application) : AndroidViewModel(application
                         targetBagId = bag3Id,
                         startHour = 20,
                         startMinute = 0,
-                        durationMinutes = 60,
+                        durationMinutes = 15,
                         activeDaysMask = 127,
-                        isEnabled = false
+                        isEnabled = false, reminderOnly = true
                     )
                 )
             } else if (r3.targetBagId != bag3Id) {
@@ -133,6 +133,17 @@ class RoutinesViewModel(application: Application) : AndroidViewModel(application
             if (updated.isEnabled) {
                 scheduler.scheduleRoutine(updated)
             }
+        }
+    }
+
+    fun updateHabitOptions(routine: RoutineEntity, cue: String, reminderOnly: Boolean) {
+        if (routine.id < 0) return
+        viewModelScope.launch(Dispatchers.IO) {
+            val latest = app.database.routineDao().getRoutineById(routine.id) ?: return@launch
+            val updated = latest.copy(cue = cue.trim().take(80), reminderOnly = reminderOnly)
+            app.database.routineDao().updateRoutine(updated)
+            scheduler.cancelRoutine(updated.id)
+            if (updated.isEnabled) scheduler.scheduleRoutine(updated)
         }
     }
 
